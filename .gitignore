@@ -15,18 +15,6 @@
 # 允许 .gitignore 自身被跟踪
 !.gitignore
 # 不要的文件路径
-/Old/
-/Bachelor_thesis_simulation/Old/
 /Bachelor_thesis_simulation/参考/
-/Bachelor_thesis_simulation/2023b_ver/
-/Bachelor_thesis_simulation/Components/
-/Common/Plot_signals/
-/Bachelor_thesis_simulation/Main/Script/Create_FDIA/slprj/
-/Bachelor_thesis_simulation/Main/Simulink/slprj/
-/Bachelor_thesis_simulation/Main/slprj/
-/Bachelor_thesis_simulation/Main/Script/POMDP/Old/
-/Bachelor_thesis_simulation/Main/Script/Filter_design/Old/
-/Bachelor_thesis_simulation/Main/Script/Filter_design/slprj/
-/Bachelor_thesis_simulation/Main/Script/Create_noise/slprj/
-/Bachelor_thesis_simulation/Main/Script/Create_FDIA/Old/
-/Common/Old/
+slprj/
+Old/
