@@ -15,7 +15,7 @@
 # 允许 .gitignore 自身被跟踪
 !.gitignore
 # 不要的文件路径
-/old/
+/Old/
 /Bachelor_thesis_simulation/Old/
 /Bachelor_thesis_simulation/参考/
 /Bachelor_thesis_simulation/2023b_ver/
@@ -29,3 +29,4 @@
 /Bachelor_thesis_simulation/Main/Script/Filter_design/slprj/
 /Bachelor_thesis_simulation/Main/Script/Create_noise/slprj/
 /Bachelor_thesis_simulation/Main/Script/Create_FDIA/Old/
+/Common/Old/
