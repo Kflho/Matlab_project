@@ -109,6 +109,10 @@ Calculate_Signal_Stats(out.y_j,0,99999);
 %Calculate_Signal_Stats(simin_FDIA,t_started,t_end);
 %Calculate_Signal_Stats(out.r,0,t_started);
 
+% 计算残差阈值
+% epsilon_r=trace(Dq*Va*(Dq'))+2*5*trace(Dq*Va*(Dq')*Dq*Va*(Dq'))
+% epsilon_r0=trace(Va)+2*5*trace(Va*Va)
+
 %画图
 Plot_signals_v5(out.r,'r','攻击前后残差对比图',1,{'t/s','r/cm'});
 Add_Threshold(1,'|r|_{max}');
@@ -118,6 +122,3 @@ Add_Threshold(1,'|r|_{max}');
 % Plot_signals_v5(yj2,'yj^2_','攻击前后性能影响参数对比图',1,{'时间/t','|y_j|^2'},{'|y_j|^2_1','|y_j|^2_2'});
 % Plot_signals_v4(FDIA2,'FDIA^2_','攻击能量图',1);
 
-% 残差阈值理论计算
-% epsilon_r=trace(Dq*Va*(Dq'))+2*5*trace(Dq*Va*(Dq')*Dq*Va*(Dq'))
-% epsilon_r0=trace(Va)+2*5*trace(Va*Va)
