@@ -16,12 +16,12 @@
 !.gitignore
 # 不要的文件路径
 /old/
-/bylw/Old/
-/bylw/参考/
-/bylw/2023b_ver/
-/bylw/Components/
+/Bachelor_thesis_simulation/Old/
+/Bachelor_thesis_simulation/参考/
+/Bachelor_thesis_simulation/2023b_ver/
+/Bachelor_thesis_simulation/Components/
 /Common/Plot_signals/
-/bylw/Main1/Script/Create_FDIA/slprj/
-/bylw/Main1/Simulink/slprj/
-/bylw/Main1/slprj/
-/bylw/Main1/Script/POMDP/Old/
+/Bachelor_thesis_simulation/Main/Script/Create_FDIA/slprj/
+/Bachelor_thesis_simulation/Main/Simulink/slprj/
+/Bachelor_thesis_simulation/Main/slprj/
+/Bachelor_thesis_simulation/Main/Script/POMDP/Old/
