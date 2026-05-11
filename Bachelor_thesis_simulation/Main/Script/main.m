@@ -1,12 +1,12 @@
 clc;
 %临时路径
-addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Main\Script\Create_FDIA')
-addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Main\Script\Create_noise')
-addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Main\Script\Create_shoukong')
+addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Function\Create_FDIA')
+addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Function\Create_noise')
+addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Function\Create_shoukong')
+addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Function\Filter_design')
+addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Function\POMDP')
 addpath('D:\local_data\software_data\programming_data\Matlab_project\Common')
 addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Main\Simulink')
-addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Main\Script\Filter_design')
-addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Main\Script\POMDP')
 %仿真设置
 Ts=1;
 FDIA_length=550;
