@@ -89,7 +89,7 @@ function Plot_signals_v5(xx, name, Fig_title, mode, axis_labels, custom_labels)
 
     % --- 模式 1：叠加显示 ---
     if ismember(1, mode)
-        figure('Name', [Fig_title, ' - 叠加显示'], 'Color', 'w');
+        figure('Name', Fig_title, 'Color', 'w');
         p_lines = plot(t, signals', 'LineWidth', line_w);
         set(gca, 'FontSize', fs_axis, 'FontName', font_name, 'LineWidth', 1);
         
@@ -97,7 +97,7 @@ function Plot_signals_v5(xx, name, Fig_title, mode, axis_labels, custom_labels)
         lgd = legend(p_lines, labels, 'Interpreter', 'tex', 'Location', 'best'); 
         set(lgd, 'FontSize', fs_legend, 'FontName', font_name);
         
-        title([Fig_title, ' (叠加)'], 'Interpreter', 'tex', 'FontSize', fs_title, 'FontWeight', 'bold', 'FontName', font_name);
+        title(Fig_title, 'Interpreter', 'tex', 'FontSize', fs_title, 'FontWeight', 'bold', 'FontName', font_name);
         xlabel(xlabel_text, 'FontSize', fs_label, 'FontWeight', 'bold', 'FontName', font_name, 'Interpreter', 'tex');
         ylabel(ylabel_text, 'FontSize', fs_label, 'FontWeight', 'bold', 'FontName', font_name, 'Rotation', 90, 'Interpreter', 'tex');
         
@@ -107,7 +107,7 @@ function Plot_signals_v5(xx, name, Fig_title, mode, axis_labels, custom_labels)
 
     % --- 模式 2：分栏显示 (Subplots) ---
     if ismember(2, mode)
-        figure('Name', [Fig_title, ' - 分栏显示'], 'Color', 'w');
+        figure('Name', Fig_title, 'Color', 'w');
         p = ceil(sqrt(numSignals));
         q = ceil(numSignals/p);
 
