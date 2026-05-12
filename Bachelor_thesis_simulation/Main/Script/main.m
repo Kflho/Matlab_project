@@ -11,9 +11,9 @@ addpath('D:\local_data\software_data\programming_data\Matlab_project\Common')
 addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Main\Simulink')
 %仿真设置
 Ts=1;
-FDIA_length=550;%攻击长度
-start_time_FDIA=250;%攻击开始时间
-start_time_QW=1000;%水印嵌入时间
+FDIA_length=350;        %攻击长度
+start_time_FDIA=250;    %攻击开始时间
+start_time_QW=0;      %水印嵌入时间
 analog_time=start_time_FDIA+FDIA_length;
 %创建受控系统
 [G,H,C,D,x_eq,u_eq,y_eq]=Create_shoukong;
@@ -78,9 +78,15 @@ disp(['当前水印：', watermarks(active).name]);
 
 
 %创建FDIA序列
+%幅值
 d_target = [5.5; 5.5];
-sign_vec = [1; 1];     % 两个通道都正向偏移
-ramp_len = 250;         % 斜坡时长
+ramp_len = 250;             % 斜坡时长
+%模平方
+% d_target = [2.5; 2.5];
+% ramp_len = 300;     
+
+sign_vec = [1; 1];          
+
 simin_FDIA = Create_FDIA_MinEnergy_LP_fixedsign_par(G, C, K_KF, FDIA_length, d_target, sign_vec, start_time_FDIA, Ts, ramp_len);
 % simin_FDIA = Create_FDIA_Kalman_v5(G, C, K_KF, [1 0;0 1], 1.5, FDIA_length,start_time_FDIA,Ts);
 %[A_xi, C_xi, xi_0]=Create_FDIA_StateSpace(A,C,K_KF,[1 0;0 1],0.4);
@@ -101,25 +107,31 @@ out=Start_simulink('Control_system_v6');
  yj2=Calculate_energy(out.y_j);
  FDIA2=Calculate_energy(simin_FDIA);
 
-%计算性能损失
+%计算性能损失，这里要让时间极长达到稳态
 disp('加水印受攻击性能损失')
 Calculate_Signal_Stats(out.y_j,0,100000);
 disp('加水印不受攻击性能损失')
 Calculate_Signal_Stats(out.y_j,0,99999);
+
 %disp('加水印受攻击性能损失')
 %Calculate_Signal_Stats(simin_FDIA,t_started,t_end);
 %Calculate_Signal_Stats(out.r,0,t_started);
 
 % 计算残差阈值
-% epsilon_r=trace(Dq*Va*(Dq'))+2*5*trace(Dq*Va*(Dq')*Dq*Va*(Dq'))
-% epsilon_r0=trace(Va)+2*5*trace(Va*Va)
+kappa=1000;
+epsilon_r=trace(Dq*Va*(Dq'))+2*kappa*trace(Dq*Va*(Dq')*Dq*Va*(Dq'))
+epsilon_r0=trace(Va)+2*kappa*trace(Va*Va)
 
 %画图
-Plot_signals_v5(out.r,'r','攻击前后残差对比图',1,{'t/s','r/cm'});
-Add_Threshold(1,'|r|_{max}');
-Plot_signals_v5(out.x,'x','攻击前后液位对比图',3,{'t/s','x/cm'});
+% Plot_signals_v5(out.r,'r','攻击前后残差对比图',1,{'t/s','r/cm'});
+% Add_Threshold(1,'|r|_{max}');
+% 
+% Plot_signals_v5(out.x,'x','攻击前后液位对比图',3,{'t/s','x/cm'});
+% 
+% Plot_signals_v5(r2,'r^2','攻击前后残差模长平方对比图',1,{'t/s','|r|^2/cm^2'},{'|r|^2'});
+% Add_Threshold(0.1043,'epsilon_{r1}');
 
-Plot_signals_v5(r2,'r^2','攻击前后残差模长平方对比图',1,{'t/s','|r|^2/cm^2'},{'|r|^2'});
-% Plot_signals_v5(yj2,'yj^2_','攻击前后性能影响参数对比图',1,{'时间/t','|y_j|^2'},{'|y_j|^2_1','|y_j|^2_2'});
-% Plot_signals_v4(FDIA2,'FDIA^2_','攻击能量图',1);
+Plot_signals_v5(yj2,'yj^2','攻击前后性能影响参数对比图',1,{'时间/t','|y_j|^2'},{'|y_j|^2','|y_j|^2_2'});
+
+% Plot_signals_v5(FDIA2,'a(t)^2','攻击能量图',1,{'t/s','|a|^2/cm^2'},{'|a|^2'});
 
