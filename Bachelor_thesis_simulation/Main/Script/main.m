@@ -1,4 +1,6 @@
 clc;
+close all;
+rng(2026); 
 %临时路径
 addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Function\Create_FDIA')
 addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Function\Create_noise')
@@ -11,7 +13,7 @@ addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_th
 Ts=1;
 FDIA_length=550;%攻击长度
 start_time_FDIA=250;%攻击开始时间
-start_time_QW=800;%水印嵌入时间
+start_time_QW=1000;%水印嵌入时间
 analog_time=start_time_FDIA+FDIA_length;
 %创建受控系统
 [G,H,C,D,x_eq,u_eq,y_eq]=Create_shoukong;
@@ -66,18 +68,19 @@ watermarks(4).Dw = [0.35,0;0,0.3];
 % 水印赋值
 Gw=G-K_KF*C-H*K;
 Hw=K_KF;
-active = 3;  % ← 每次只改这一个数字
+active = 4;  % ← 每次只改这一个数字
 Cw = watermarks(active).Cw;
 Dw = watermarks(active).Dw;
+
 [Gq, Hq, Cq, Dq] = Get_remover_matrices(Gw, Hw, Cw, Dw);
 disp(['当前水印：', watermarks(active).name]);
 
 
 
 %创建FDIA序列
-d_target = [5; 4.5];
+d_target = [5.5; 5.5];
 sign_vec = [1; 1];     % 两个通道都正向偏移
-ramp_len = 50;         % 前50步斜坡上升
+ramp_len = 250;         % 斜坡时长
 simin_FDIA = Create_FDIA_MinEnergy_LP_fixedsign_par(G, C, K_KF, FDIA_length, d_target, sign_vec, start_time_FDIA, Ts, ramp_len);
 % simin_FDIA = Create_FDIA_Kalman_v5(G, C, K_KF, [1 0;0 1], 1.5, FDIA_length,start_time_FDIA,Ts);
 %[A_xi, C_xi, xi_0]=Create_FDIA_StateSpace(A,C,K_KF,[1 0;0 1],0.4);
@@ -113,10 +116,10 @@ Calculate_Signal_Stats(out.y_j,0,99999);
 
 %画图
 Plot_signals_v5(out.r,'r','攻击前后残差对比图',1,{'t/s','r/cm'});
-% Add_Threshold(1,'|r|_{max}');
+Add_Threshold(1,'|r|_{max}');
 Plot_signals_v5(out.x,'x','攻击前后液位对比图',3,{'t/s','x/cm'});
 
-% Plot_signals_v5(r2,'r^2','攻击前后残差模长平方对比图',1,{'t/s','|r|^2/cm^2'},{'|r|^2'});
+Plot_signals_v5(r2,'r^2','攻击前后残差模长平方对比图',1,{'t/s','|r|^2/cm^2'},{'|r|^2'});
 % Plot_signals_v5(yj2,'yj^2_','攻击前后性能影响参数对比图',1,{'时间/t','|y_j|^2'},{'|y_j|^2_1','|y_j|^2_2'});
 % Plot_signals_v4(FDIA2,'FDIA^2_','攻击能量图',1);
 
