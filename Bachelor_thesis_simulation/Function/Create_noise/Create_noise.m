@@ -38,9 +38,9 @@ noise_raw = (L * standard_noise')';
 % --- 3. 时间与数据直观输出 ---
 time = (0:total_points-1)' * Ts;
 
-fprintf('\n--- 通信噪声参数报告 (基础函数实现) ---\n');
-fprintf('总持续时长  : %.2f 秒 (共 %d 个时间点)\n', (total_points-1)*Ts, total_points);
-fprintf('------------------------------\n');
+% fprintf('\n--- 通信噪声参数报告 (基础函数实现) ---\n');
+% fprintf('总持续时长  : %.2f 秒 (共 %d 个时间点)\n', (total_points-1)*Ts, total_points);
+% fprintf('------------------------------\n');
 
 % 直接输出噪声序列数据表格 (Time | Noise Ch1 | Noise Ch2)
 %fprintf('\n生成的通信噪声序列数据 (Time | Noise Ch1 | Noise Ch2):\n');

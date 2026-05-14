@@ -8,15 +8,21 @@ addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_th
 addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Function\Filter_design')
 addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Function\POMDP')
 addpath('D:\local_data\software_data\programming_data\Matlab_project\Common')
+addpath('D:\local_data\software_data\programming_data\Matlab_project\Common\Plot')
+addpath('D:\local_data\software_data\programming_data\Matlab_project\Common\Calculate\')
+addpath('D:\local_data\software_data\programming_data\Matlab_project\Common\Visualization')
 addpath('D:\local_data\software_data\programming_data\Matlab_project\Bachelor_thesis_simulation\Main\Simulink')
 %仿真设置
 Ts=1;
-FDIA_length=350;        %攻击长度
+FDIA_length=750;        %攻击长度
 start_time_FDIA=250;    %攻击开始时间
-start_time_QW=0;      %水印嵌入时间
+start_time_QW=2000;      %水印嵌入时间
 analog_time=start_time_FDIA+FDIA_length;
+%图片设置
+
 %创建受控系统
 [G,H,C,D,x_eq,u_eq,y_eq]=Create_shoukong;
+H_ext = [H, eye(4)];
 %创建性能矩阵
 Cj=[
     0.806 0 0 0;
@@ -68,7 +74,7 @@ watermarks(4).Dw = [0.35,0;0,0.3];
 % 水印赋值
 Gw=G-K_KF*C-H*K;
 Hw=K_KF;
-active = 4;  % ← 每次只改这一个数字
+active = 3;  % ← 每次只改这一个数字
 Cw = watermarks(active).Cw;
 Dw = watermarks(active).Dw;
 
@@ -92,7 +98,7 @@ simin_FDIA = Create_FDIA_MinEnergy_LP_fixedsign_par(G, C, K_KF, FDIA_length, d_t
 %[A_xi, C_xi, xi_0]=Create_FDIA_StateSpace(A,C,K_KF,[1 0;0 1],0.4);
 
 %创建噪声
-[Vk,Wk,simin_noise_va]=Create_noise(analog_time);
+[simin_noise_Wk, simin_noise_Vk, simin_noise_Va, Vk, Wk] = Create_noise_v2(analog_time);
 I_a=eye(length(G));
 %P0=diag([10;10;10;10]);
 Va=diag([0.003844, 0.004032]); 
@@ -108,30 +114,44 @@ out=Start_simulink('Control_system_v6');
  FDIA2=Calculate_energy(simin_FDIA);
 
 %计算性能损失，这里要让时间极长达到稳态
-disp('加水印受攻击性能损失')
-Calculate_Signal_Stats(out.y_j,0,100000);
+% disp('加水印受攻击性能损失')
+% Calculate_Signal_Stats(out.y_j,0,2000);
 disp('加水印不受攻击性能损失')
-Calculate_Signal_Stats(out.y_j,0,99999);
+Calculate_Signal_Stats(yj2,0,2000);
 
 %disp('加水印受攻击性能损失')
 %Calculate_Signal_Stats(simin_FDIA,t_started,t_end);
 %Calculate_Signal_Stats(out.r,0,t_started);
 
 % 计算残差阈值
-kappa=1000;
-epsilon_r=trace(Dq*Va*(Dq'))+2*kappa*trace(Dq*Va*(Dq')*Dq*Va*(Dq'))
-epsilon_r0=trace(Va)+2*kappa*trace(Va*Va)
+kappa=5;
+epsilon_r=trace(Dq*Va*(Dq'))+2*kappa*trace(Dq*Va*(Dq')*Dq*Va*(Dq'));
+epsilon_r0=trace(Va)+2*kappa*trace(Va*Va);
 
 %画图
-% Plot_signals_v5(out.r,'r','攻击前后残差对比图',1,{'t/s','r/cm'});
-% Add_Threshold(1,'|r|_{max}');
+% %% ========================= 图1：攻击前后残差对比图 =========================
+% Plot_signals_v5(out.r, 'r', '攻击前后残差对比图', 1, {'t/s', 'r/cm'});
+% Add_Threshold(1, '|r|_{max}');
+% Export_fig_paper(gcf, 'fig01_residual', 5.5);
 % 
-% Plot_signals_v5(out.x,'x','攻击前后液位对比图',3,{'t/s','x/cm'});
+% %% ========================= 图2：攻击前后液位对比图（共4张，分别导出） =========================
+% figs_before = findobj('Type', 'figure');                  % 记录已有图窗
+% Plot_signals_v5(out.x, 'x', '攻击前后液位对比图', 3, {'t/s', 'x/cm'});
+% figs_after  = findobj('Type', 'figure');
+% hFigs_liquid = setdiff(figs_after, figs_before, 'stable'); % 新增图窗（保持创建顺序）
+% for k = 1:length(hFigs_liquid)
+%     Export_fig_paper(hFigs_liquid(k), sprintf('fig02_liquid_level_%d', k), 5.5);
+% end
+
+%% ========================= 图3：攻击前后残差模长平方对比图 =========================
+Plot_signals_v5(r2, 'r^2', '攻击前后残差模长平方对比图', 1, {'t/s', '|r|^2/cm^2'}, {'|r|^2'});
+Add_Threshold(epsilon_r, 'epsilon_{r}');
+Export_fig_paper(gcf, 'fig03_residual_square', 5.5);
+
+% %% ========================= 图4：攻击前后性能影响参数对比图 =========================
+% Plot_signals_v5(yj2, 'yj^2', '攻击前后性能影响参数对比图', 1, {'时间/t', '|y_j|^2'}, {'|y_j|^2', '|y_j|^2_2'});
+% Export_fig_paper(gcf, 'fig04_performance', 5.5);
 % 
-% Plot_signals_v5(r2,'r^2','攻击前后残差模长平方对比图',1,{'t/s','|r|^2/cm^2'},{'|r|^2'});
-% Add_Threshold(0.1043,'epsilon_{r1}');
-
-Plot_signals_v5(yj2,'yj^2','攻击前后性能影响参数对比图',1,{'时间/t','|y_j|^2'},{'|y_j|^2','|y_j|^2_2'});
-
-% Plot_signals_v5(FDIA2,'a(t)^2','攻击能量图',1,{'t/s','|a|^2/cm^2'},{'|a|^2'});
-
+% %% ========================= 图5：攻击能量图 =========================
+% Plot_signals_v5(FDIA2, 'a(t)^2', '攻击能量图', 1, {'t/s', '|a|^2/cm^2'}, {'|a|^2'});
+% Export_fig_paper(gcf, 'fig05_attack_energy', 5.5);

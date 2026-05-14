@@ -112,13 +112,13 @@ epsilon = reshape(eps_vec, [m, total_steps]);
 
 % ---- 验证理论偏移 ----
 fprintf('攻击序列生成成功 (并行LP, 斜坡=%d步)\n', ramp_steps);
-for t = 1:total_steps
-    eps_t = eps_vec(1:(m*t));
-    delta_m = M_cell{t} * eps_t;
-    C_delta_m = C * delta_m;
-    fprintf('t=%-3d: 期望偏移 [%s], 理论偏移 [%s]\n', t, ...
-            num2str(d_mat(:,t)', '%.4f  '), num2str(C_delta_m', '%.4f  '));
-end
+% for t = 1:total_steps
+%     eps_t = eps_vec(1:(m*t));
+%     delta_m = M_cell{t} * eps_t;
+%     C_delta_m = C * delta_m;
+%     fprintf('t=%-3d: 期望偏移 [%s], 理论偏移 [%s]\n', t, ...
+%             num2str(d_mat(:,t)', '%.4f  '), num2str(C_delta_m', '%.4f  '));
+% end
 fprintf('攻击信号总能量(L1): %.4f\n', fval);
 
 % ---- 生成 Simulink 时间序列 ----
