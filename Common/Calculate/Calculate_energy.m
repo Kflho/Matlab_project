@@ -37,8 +37,8 @@ function ts_out = Calculate_energy(ts_in)
     ts_out.Name = [ts_in.Name, '_SquaredNorm'];
     
     % 打印处理结果
-    fprintf('--- 残差模长平方计算完成 ---\n');
-    fprintf('原始信号通道数: %d\n', min(d1, d2));
-    fprintf('采样点总数: %d\n', num_time_points);
-    fprintf('---------------------------\n');
+    % fprintf('--- 残差模长平方计算完成 ---\n');
+    % fprintf('原始信号通道数: %d\n', min(d1, d2));
+    % fprintf('采样点总数: %d\n', num_time_points);
+    % fprintf('---------------------------\n');
 end
