@@ -105,61 +105,27 @@ function run_experiment(exp)
     r2   = Calculate_energy(out.r);
     yj2  = Calculate_energy(out.y_j);
     FDIA2 = Calculate_energy(simin_FDIA);
+% ---- 7. 统计实验专用输出 ----
+% ---- 特殊实验处理 ---
 
-    % ---- 7. 统计实验专用输出 ----
-   % ---- 特殊实验处理 ----
-    if isfield(exp, 'calc_threshold') && exp.calc_threshold
-        kappa = 1000;
-        if ~isempty(Dq)
-            epsilon_r = trace(Dq*Va*(Dq')) + 2*kappa*trace(Dq*Va*(Dq')*Dq*Va*(Dq'));
-            fprintf('  [%s] 残差阈值 epsilon_r = %.4f\n', exp.name, epsilon_r);
-        else
-            epsilon_r0 = trace(Va) + 2*kappa*trace(Va*Va);
-            fprintf('  [%s] 无水印残差阈值 epsilon_r0 = %.4f\n', exp.name, epsilon_r0);
-        end
-        return;
-    end
-    % ---- 特殊实验：阈值对比（使用原有阈值与新阈值）----
-if isfield(exp, 'calc_detection_compare') && exp.calc_detection_compare
-    % 计算新阈值（基于当前水印矩阵 Dq 和通信噪声协方差 Va）
-    kappa = exp.kappa;   % 容限系数，例如 5
-    new_epsilon = trace(Dq*Va*Dq') + 2*kappa * trace((Dq*Va*Dq')^2);
-    orig_epsilon = exp.original_epsilon;
-
-    % 攻击时间区间（可处理多段攻击）
-    att_start = exp.attack_start;
-    att_end   = exp.attack_end;
-
-    % 构造残差模平方时间序列
-    r_data = out.r.Data;          % 通常为 [时间点 x 2] 或 [2 x 时间点]
+% --- 特殊实验：为贪心阈值搜索准备残差数据 ---
+if isfield(exp, 'calc_optimal_kappa') && exp.calc_optimal_kappa
+    % 生成残差模平方时间序列
+    r_data = out.r.Data;
     if size(r_data, 1) == length(out.r.Time)
-        norm_r = sum(r_data.^2, 2);   % 每一时刻的范数平方
+        norm_r = sum(r_data.^2, 2);
     else
-        norm_r = sum(r_data.^2, 1)';  % 转置为列向量
+        norm_r = sum(r_data.^2, 1)';
     end
     r2_ts = timeseries(norm_r, out.r.Time);
-
-    % 计算原有阈值与 new_epsilon 下的检测性能指标
-    [Pd_old, Pf_old, Pm_old] = Calculate_DetectionMetrics(r2_ts, orig_epsilon, att_start, att_end);
-    [Pd_new, Pf_new, Pm_new] = Calculate_DetectionMetrics(r2_ts, new_epsilon,  att_start, att_end);
-
-    fprintf('\n===== 实验 9：阈值对比（粗选水印，kappa=%d）=====\n', kappa);
-    if exp.watermark_idx > 0
-    wm_name = watermarks(exp.watermark_idx).name;
-else
-    wm_name = '无水印';
+    assignin('base', 'r2_ts', r2_ts);   % 存入基础工作区，供 batch 脚本取用
+    fprintf('  残差能量序列已保存到基础工作区变量 r2_ts。\n');
+    return;
 end
-    fprintf('水印方案：%s\n', wm_name);
-    fprintf('原有阈值 epsilon_old = %.4f\n', orig_epsilon);
-    fprintf('新阈值   epsilon_new = %.4f\n', new_epsilon);
-    fprintf('------------ 检测性能对比 ------------\n');
-    fprintf('指标         原有阈值      新阈值\n');
-    fprintf('检测率    %8.4f      %8.4f\n', Pd_old, Pd_new);
-    fprintf('误报率    %8.4f      %8.4f\n', Pf_old, Pf_new);
-    fprintf('漏报率    %8.4f      %8.4f\n', Pm_old, Pm_new);
-    fprintf('======================================\n');
-    return;   % 不画图，直接结束
-end
+
+
+
+
     if isfield(exp, 'calc_stats') && exp.calc_stats
         fprintf('--- 长期性能损失统计 [%s] ---\n', exp.name);
         Calculate_Signal_Stats(out.y_j, 0, analog_time);

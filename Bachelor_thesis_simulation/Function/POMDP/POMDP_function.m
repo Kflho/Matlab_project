@@ -1,15 +1,11 @@
 % POMDP_v10.m — 考虑误报率的动态水印触发与切换仿真
 % 修正版：修复 P_step 初始化、观测索引错误、转移矩阵更新位置
-
+function avg_costs=POMDP_function(p_min,TrueAtkFreq)
 addpath('D:\local_data\software_data\programming_data\Matlab_project\Common\Visualization');
-clear;clc;
 output_dir = 'Figures_POMDP';
 if ~exist(output_dir, 'dir'), mkdir(output_dir); end
 
-% 启动并行池
-if isempty(gcp('nocreate'))
-    parpool('local');
-end
+
 
 % 全局图形属性
 set(0, 'DefaultFigureColor',        'w');
@@ -29,12 +25,12 @@ set(0, 'DefaultLineLineWidth',      1.5);
 
 % 仿真配置
 SimTime = 10000;
-TrueAtkFreq = 0.005;           % 真实攻击频率
+% TrueAtkFreq = 0.005;           % 真实攻击频率
 PolicyUpdateInterval = 5000;   % 策略重算间隔
 
 T = 150;               % 攻击持续时间（可根据仿真需要调整）
 p_init = 0.05;         % 初始攻击猜测频率
-p_min = 0.02;
+% p_min = 0.05;
 gamma = 0.95;          % 折扣因子
 grid_size = 0.05;     % 信念离散化步长
 
@@ -313,4 +309,5 @@ function b_post = bayesian_posterior(b_pred, a, obs, DetRate, FalseAlarmRate, gr
     else
         b_post = b_pred;   % 防止零和
     end
+end
 end

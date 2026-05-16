@@ -1,6 +1,13 @@
-function [best_Dw, best_Cw, global_best_cost] = Optimize_watermark_PSO_Discrete_v2(A, B, C, K, K_KF, Cj, Dj, epsilon_r, epsilon_a)
+function [best_Dw, best_Cw, global_best_cost] = Optimize_watermark_PSO(A, B, C, K, K_KF, Cj, Dj, epsilon_r, epsilon_a, num_particles, max_iter)
+% ...
+% 新增输入参数（可选）：
+%   num_particles : 粒子群规模，默认 300
+%   max_iter      : 最大迭代次数，默认 300
+
+    if nargin < 10, max_iter = 300; end
+    if nargin < 9, num_particles = 300; end
 % =========================================================================
-% 基于粒子群算法 (PSO) 的最优水印设计 (强制对齐离散网格版)
+% 基于粒子群算法 (PSO) 的最优水印设计 (连续优化版)
 % 适配 20 维单卡尔曼滤波器 (KF) 架构
 % =========================================================================
 
@@ -15,16 +22,12 @@ nx_w = nx;
 dim = ny + (ny * nx_w); 
 
 %% 2. PSO 算法核心参数设置
-num_particles = 300;       % 粒子群规模
-max_iter = 300;            % 最大迭代次数
-
-% --- 网格步长设定 ---
-step_Dw = 0.05;
-step_Cw = 0.1;
+% num_particles = 10;       % 粒子群规模
+% max_iter = 10;            % 最大迭代次数
 
 % 定义搜索边界
-LB = [0.2, 0.2, -1 * ones(1, ny * nx_w)]; 
-UB = [0.9, 0.9,  1 * ones(1, ny * nx_w)]; 
+LB = [0.001, 0.001, -1 * ones(1, ny * nx_w)]; 
+UB = [0.2, 0.2,  1 * ones(1, ny * nx_w)]; 
 
 % 速度边界 
 V_max = 0.2 * (UB - LB);
@@ -35,17 +38,13 @@ w_start = 0.9; w_end = 0.4;
 c1 = 1.5; 
 c2 = 1.5; 
 
-%% 3. 初始化粒子群 (并强制对齐网格)
+%% 3. 初始化粒子群 (连续空间，不做离散化)
 Positions = zeros(num_particles, dim);
 Velocities = zeros(num_particles, dim);
 for i = 1:dim
     Positions(:, i) = LB(i) + (UB(i) - LB(i)) * rand(num_particles, 1);
     Velocities(:, i) = V_min(i) + (V_max(i) - V_min(i)) * rand(num_particles, 1);
 end
-
-% 初始位置网格吸附
-Positions(:, 1:2) = round(Positions(:, 1:2) / step_Dw) * step_Dw;
-Positions(:, 3:end) = round(Positions(:, 3:end) / step_Cw) * step_Cw;
 
 % 初始化最优记录
 pBest_Positions = Positions;
@@ -54,12 +53,12 @@ gBest_Position = zeros(1, dim);
 gBest_Score = inf;
 
 options = sdpsettings('solver', 'mosek', 'verbose', 0, 'cachesolvers', 1);
-% 【新增这行防卡死代码】：限制 MOSEK 内部只使用 1 个线程
+% 【防卡死代码】：限制 MOSEK 内部只使用 1 个线程
 options.mosek.MSK_IPAR_NUM_THREADS = 1;
 
 %% 4. PSO 主循环
 fprintf('\n======================================================\n');
-fprintf('启动离散 PSO 优化 (网格 Dw:%.2f, Cw:%.2f)\n', step_Dw, step_Cw);
+fprintf('启动连续 PSO 优化 (无网格离散)\n');
 global_tic = tic;
 
 for iter = 1:max_iter
@@ -94,33 +93,29 @@ for iter = 1:max_iter
             pBest_Positions(i, :) = Positions(i, :);
         end
         
-% 更新全局最优
+        % 更新全局最优
         if cost < gBest_Score
             gBest_Score = cost;
             gBest_Position = Positions(i, :);
             fprintf('  >>> [突破] 第%d代发现新全局最优: Cost = %.4f\n', iter, gBest_Score);
             
-            % =======================================================
-            % 【新增：实时打印并保存到硬盘】
-            % =======================================================
             % 1. 实时解析出当前矩阵
             temp_Dw = diag([gBest_Position(1), gBest_Position(2)]);
             temp_Cw = reshape(gBest_Position(3:end), size(C, 1), size(A, 1));
             
-            % 2. 打印到命令行，方便你随时瞄一眼
-            disp('  当前暂存 Dw ='); disp(temp_Dw);
-            disp('  当前暂存 Cw ='); disp(temp_Cw);
+            % 2. 打印到命令行（保留四位小数）
+            fprintf('  当前暂存 Dw =\n');
+            print_matrix_4d(temp_Dw);
+            fprintf('  当前暂存 Cw =\n');
+            print_matrix_4d(temp_Cw);
             
-            % 3. 强行写入硬盘 (文件名为 Temp_Best_Watermark.mat)
-            % 哪怕你马上强退 MATLAB，这个文件也会留在你的当前文件夹里
-            % 动态生成文件名，将 epsilon_a 的值拼接到文件名中
+            % 3. 强行写入硬盘
             temp_filename = sprintf('Temp_Best_Watermark_ea_%g.mat', epsilon_a);
             save(temp_filename, 'temp_Dw', 'temp_Cw', 'gBest_Score');
-            % =======================================================
         end
     end
     
-    % --- 更新速度和位置 (保持不变) ---
+    % --- 更新速度和位置 (连续空间，无离散化) ---
     for i = 1:num_particles
         r1 = rand(1, dim);
         r2 = rand(1, dim);
@@ -132,10 +127,6 @@ for iter = 1:max_iter
         Velocities(i, :) = max(min(Velocities(i, :), V_max), V_min);
         Positions(i, :) = Positions(i, :) + Velocities(i, :);
         Positions(i, :) = max(min(Positions(i, :), UB), LB);
-        
-        % 强制离散化吸附
-        Positions(i, 1:2)   = round(Positions(i, 1:2) / step_Dw) * step_Dw;
-        Positions(i, 3:end) = round(Positions(i, 3:end) / step_Cw) * step_Cw;
     end
     
     fprintf('[Iter %02d/%02d] 耗时 %.1fs | 当前最优: %.4f | 有效解: %d/%d\n', ...
@@ -148,15 +139,30 @@ best_Dw = diag([gBest_Position(1), gBest_Position(2)]);
 best_Cw = reshape(gBest_Position(3:end), size(C, 1), size(A, 1));
 
 fprintf('\n======================================================\n');
-fprintf('离散 PSO 优化完成！总耗时: %.1f 分钟\n', toc(global_tic)/60);
+fprintf('连续 PSO 优化完成！总耗时: %.1f 分钟\n', toc(global_tic)/60);
 if gBest_Score == inf
     fprintf('诊断报告: 寻优失败，未找到任何可行解。\n');
 else
-    fprintf('全局最优 Cost: %.6f\n', gBest_Score);
-    disp('最优 Dw ='); disp(best_Dw);
-    disp('最优 Cw ='); disp(best_Cw);
+    fprintf('全局最优 Cost: %.4f\n', gBest_Score);
+    fprintf('最优 Dw =\n');
+    print_matrix_4d(best_Dw);
+    fprintf('最优 Cw =\n');
+    print_matrix_4d(best_Cw);
 end
 
+end
+
+% =========================================================================
+% 内部辅助函数：按四位小数打印矩阵
+% =========================================================================
+function print_matrix_4d(M)
+    [rows, cols] = size(M);
+    for r = 1:rows
+        for c = 1:cols
+            fprintf('  %.4f', M(r,c));
+        end
+        fprintf('\n');
+    end
 end
 
 % =========================================================================

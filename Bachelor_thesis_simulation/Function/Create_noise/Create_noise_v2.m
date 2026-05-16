@@ -1,4 +1,4 @@
-function [sim_Wk, sim_Vk, sim_Va, Vk, Wk] = Create_noise_v2(total_points)
+function [sim_Wk, sim_Vk, sim_Va, Vk,Va, Wk] = Create_noise_v2(total_points)
 % 生成三种独立的高斯白噪声序列，以及对应的协方差矩阵
 % 输出：
 %   sim_Wk : 过程噪声 timeseries  (4 × total_points)
@@ -8,14 +8,16 @@ function [sim_Wk, sim_Vk, sim_Va, Vk, Wk] = Create_noise_v2(total_points)
 %   Wk     : 过程噪声协方差矩阵   (4×4)
 
     Ts = 1;
-
+    px=30;
+    py=1;
     % --- 过程噪声协方差 Wk ---
-    Wk = diag([0.01538,0.01613,0.000324,0.000196]);
+    Wk = diag([0.0001*px,0.0001*px,0.0001*px,0.0001*px]);
 
     % --- 观测/通信噪声协方差 Vk / Va ---
     % （两者统计特性相同，但序列独立）
-    Va = diag([0.003844, 0.004032]);
-    Vk = Va;   % 观测噪声协方差使用相同值
+    Vk = diag([0.003844*py, 0.004032*py]);
+    Va = diag([0.00003844, 0.00004032]);
+    %Vk = Va;   % 观测噪声协方差使用相同值
 
     % --- 时间向量 ---
     time = (0:total_points-1)' * Ts;

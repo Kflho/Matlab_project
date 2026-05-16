@@ -71,6 +71,8 @@ watermarks(4).Cw = [0.2,-0.4,0.3,-1;-0.3,0.1,-0.9,0.1];
 watermarks(4).Dw = [0.35,0;0,0.3];
 % ... 继续添加
 
+% 计算
+ [best_Dw, best_Cw, global_best_cost] = Optimize_watermark_PSO(G, H, C, K, K_KF, Cj, Dj, 1, 99)
 % 水印赋值
 Gw=G-K_KF*C-H*K;
 Hw=K_KF;
@@ -124,9 +126,9 @@ Calculate_Signal_Stats(yj2,0,2000);
 %Calculate_Signal_Stats(out.r,0,t_started);
 
 % 计算残差阈值
-kappa=5;
-epsilon_r=trace(Dq*Va*(Dq'))+2*kappa*trace(Dq*Va*(Dq')*Dq*Va*(Dq'));
-epsilon_r0=trace(Va)+2*kappa*trace(Va*Va);
+% kappa=5;
+% epsilon_r=trace(Dq*Va*(Dq'))+2*kappa*trace(Dq*Va*(Dq')*Dq*Va*(Dq'));
+% epsilon_r0=trace(Va)+2*kappa*trace(Va*Va);
 
 %画图
 % %% ========================= 图1：攻击前后残差对比图 =========================
@@ -144,9 +146,9 @@ epsilon_r0=trace(Va)+2*kappa*trace(Va*Va);
 % end
 
 %% ========================= 图3：攻击前后残差模长平方对比图 =========================
-Plot_signals_v5(r2, 'r^2', '攻击前后残差模长平方对比图', 1, {'t/s', '|r|^2/cm^2'}, {'|r|^2'});
-Add_Threshold(epsilon_r, 'epsilon_{r}');
-Export_fig_paper(gcf, 'fig03_residual_square', 5.5);
+% Plot_signals_v5(r2, 'r^2', '攻击前后残差模长平方对比图', 1, {'t/s', '|r|^2/cm^2'}, {'|r|^2'});
+% Add_Threshold(epsilon_r, 'epsilon_{r}');
+% Export_fig_paper(gcf, 'fig03_residual_square', 5.5);
 
 % %% ========================= 图4：攻击前后性能影响参数对比图 =========================
 % Plot_signals_v5(yj2, 'yj^2', '攻击前后性能影响参数对比图', 1, {'时间/t', '|y_j|^2'}, {'|y_j|^2', '|y_j|^2_2'});
