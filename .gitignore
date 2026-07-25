@@ -12,6 +12,9 @@
 !*.slx
 !*.mdl
 
+# 跟踪 Markdown 文档（CLAUDE.md 等）
+!*.md
+
 # 允许 .gitignore 自身被跟踪
 !.gitignore
 # 不要的文件路径
