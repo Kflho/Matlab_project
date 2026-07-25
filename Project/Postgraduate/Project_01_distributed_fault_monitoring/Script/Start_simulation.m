@@ -19,7 +19,7 @@ clear; clc;
 % ====================================================
 %  1. 路径添加与参数加载
 % ====================================================
-addpath(genpath('../../../Common/'));
+addpath(genpath('../../../../Common/'));
 addpath(genpath('../Function/'));
 addpath(genpath('../Script/'));
 

@@ -12,7 +12,7 @@
 %    - 所有 Main/ 下的脚本
 
 clear; clc;
-addpath(genpath('../../../Common/'));
+addpath(genpath('../../../../Common/'));
 addpath(genpath('../Function/'));
 addpath(genpath('../Script/'));
 

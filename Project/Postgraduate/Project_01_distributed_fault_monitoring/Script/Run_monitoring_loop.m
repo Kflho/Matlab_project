@@ -12,7 +12,9 @@
 %    - alarm_flag: 报警标记（J_T2 > J_th 时触发）
 
 clear; clc;
-addpath(genpath('../../../Common/'));
+addpath(genpath('../../../../Common/'));
+addpath(genpath('../Function/'));
+addpath(genpath('../Script/'));
 
 % ---- 加载参数与预设计结果 ----
 Init_parameters;

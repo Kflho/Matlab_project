@@ -8,7 +8,9 @@
 %    - 定位 J_{T^2,omega} 响应异常的计算中心
 
 clear; clc;
-addpath(genpath('../../../Common/'));
+addpath(genpath('../../../../Common/'));
+addpath(genpath('../Function/'));
+addpath(genpath('../Script/'));
 
 % ---- 加载参数 ----
 Init_parameters;

@@ -6,7 +6,7 @@
 clear; clc;
 
 % ---- 添加路径 ----
-addpath(genpath('../../../Common/'));
+addpath(genpath('../../../../Common/'));
 addpath(genpath('../Function/'));
 addpath(genpath('../Script/'));
 

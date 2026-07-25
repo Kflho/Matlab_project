@@ -14,7 +14,9 @@
 %    若交叉估计与本地预测值不一致 → 确认为故障源
 
 clear; clc;
-addpath(genpath('../../../Common/'));
+addpath(genpath('../../../../Common/'));
+addpath(genpath('../Function/'));
+addpath(genpath('../Script/'));
 
 % ---- 加载参数 ----
 Init_parameters;
