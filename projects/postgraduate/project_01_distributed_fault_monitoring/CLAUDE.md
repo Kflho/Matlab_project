@@ -7,6 +7,7 @@
 - **Project 01 Note**: `D:\data\online\software\common\obsidian\data\projects\universiy\postgraduate\1. plant-wide monitoring and fault localization for interaction-oriented distributed systems\pg 01 note.md`
 - **Project 01 参考文献**: `D:\data\online\software\common\obsidian\data\projects\universiy\postgraduate\1. plant-wide monitoring and fault localization for interaction-oriented distributed systems\pg 01 参考文献.md`
 - **Project 01 Schedule**: `D:\data\online\software\common\obsidian\data\projects\universiy\postgraduate\1. plant-wide monitoring and fault localization for interaction-oriented distributed systems\pg 01 schedule.md`
+- **论文文件夹**: `D:\data\local\study\projects\postgraduate\pg_01\references`
 
 ## 项目映射
 
