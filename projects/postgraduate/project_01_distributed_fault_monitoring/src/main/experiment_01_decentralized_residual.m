@@ -43,14 +43,14 @@ create_model_1;
 [A_z, L] = solve_luenberger_lmi(A_g, C_g, Sigma_w, Sigma_v);
 
 % 1e. 计算中心划分
-Omega = 2;
+n_omega = 2;
 indices_omega = {[1, 3], [2, 4]};
 
 % 1f. 矩阵拆分与协方差计算（公式 19, 25-26）
 [A_z_omega, L_omega, Sigma_r_omega, Sigma_r_all] = ...
     split_matrices_and_cov(A_z, L, indices_omega, Sigma_w, Sigma_v, C_g);
 
-fprintf('  离线设计完成：Omega=%d, N_x=%d, N_y=%d\n', Omega, size(A_g,1), size(C_g,1));
+fprintf('  离线设计完成：n_omega=%d, N_x=%d, N_y=%d\n', n_omega, size(A_g,1), size(C_g,1));
 
 %% ============================================================
 %  2. 仿真数据生成
@@ -116,7 +116,7 @@ fprintf('  仿真完成：T_sim=%d, u=%dx%d, y=%dx%d, x=%dx%d\n', ...
 %% ============================================================
 %  3. 全局残差计算（所有中心一起）
 % ============================================================
-fprintf('\n--- 3. 全局残差计算（%d 个中心联合）---\n', Omega);
+fprintf('\n--- 3. 全局残差计算（%d 个中心联合）---\n', n_omega);
 
 [r_y_all, r_s_all] = compute_online_residuals(...
     u_seq, y_seq, s_cell, ...
@@ -125,7 +125,7 @@ fprintf('\n--- 3. 全局残差计算（%d 个中心联合）---\n', Omega);
     indices_omega, n_x, n_y, n_s);
 
 fprintf('  全局残差维度：\n');
-for omega = 1:Omega
+for omega = 1:n_omega
     fprintf('    中心 %d: r_y = %dx%d,  r_s = %dx%d\n', ...
         omega, size(r_y_all{omega}, 1), size(r_y_all{omega}, 2), ...
         size(r_s_all{omega}, 1), size(r_s_all{omega}, 2));
@@ -136,10 +136,10 @@ end
 % ============================================================
 fprintf('\n--- 4. 局域残差计算（逐中心独立）---\n');
 
-r_y_loc = cell(1, Omega);
-r_s_loc = cell(1, Omega);
+r_y_loc = cell(1, n_omega);
+r_s_loc = cell(1, n_omega);
 
-for omega = 1:Omega
+for omega = 1:n_omega
     % 仅传入当前中心的索引
     idx_single = {indices_omega{omega}};
 
@@ -167,10 +167,10 @@ end
 fprintf('\n===== 5. 对比验证 =====\n\n');
 
 all_passed = true;
-max_err_y = zeros(1, Omega);
-max_err_s = zeros(1, Omega);
+max_err_y = zeros(1, n_omega);
+max_err_s = zeros(1, n_omega);
 
-for omega = 1:Omega
+for omega = 1:n_omega
 
     % ---- 5a. 输出残差 r_y 对比 ----
     err_y = max(abs(r_y_loc{omega}(:) - r_y_all{omega}(:)));
@@ -219,7 +219,7 @@ fprintf('\n--- 7. 可视化 ---\n');
 n_plot = min(200, T_sim);
 t_plot = (0:n_plot-1);
 
-for omega = 1:Omega
+for omega = 1:n_omega
 
     % ---- r_y 对比图 ----
     figh_y = figure('Name', sprintf('实验01-中心%d-输出残差', omega), ...
@@ -291,7 +291,7 @@ for i = 1:n_s
     end
 end
 
-for omega = 1:Omega
+for omega = 1:n_omega
     idx = indices_omega{omega};
     rows_y_omega = [];
     for s = idx
@@ -315,7 +315,7 @@ fprintf('  %-10s %-12s %-18s %-18s %s\n', ...
     '中心', '管辖子系统', 'max|err(r_y)|', 'max|err(r_s)|', '判定');
 fprintf('  %-10s %-12s %-18s %-18s %s\n', ...
     '------', '----------', '----------------', '----------------', '------');
-for omega = 1:Omega
+for omega = 1:n_omega
     verdict_str = '通过';
     if max_err_y(omega) >= 1e-12 || max_err_s(omega) >= 1e-12
         verdict_str = '未通过';
@@ -330,7 +330,7 @@ end
 out_data = '../../outputs/experiment_01_decentralized_residual/data/';
 if ~exist(out_data, 'dir'), mkdir(out_data); end
 save([out_data 'results.mat'], ...
-    'max_err_y', 'max_err_s', 'indices_omega', 'Omega', 'T_sim');
+    'max_err_y', 'max_err_s', 'indices_omega', 'n_omega', 'T_sim');
 fprintf('\n  产出已保存到 outputs/experiment_01_decentralized_residual/\n');
 
 fprintf('\n========== 实验 01 结束 ==========\n');

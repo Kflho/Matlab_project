@@ -42,7 +42,7 @@ function [A_z_omega, L_omega, Sigma_r_omega, Sigma_r_all] = split_matrices_and_c
 %   Example:
 %       [A_z_om, L_om, Sr_om, Sr_all] = split_matrices_and_cov(...
 %           A_z, L, {[1,3], [2,4]}, Sigma_w, Sigma_v, C_g);
-%       for w = 1:Omega
+%       for w = 1:n_omega
 %           fprintf('Center %d: Σ_r = %.4e\n', w, Sr_om{w});
 %       end
 
@@ -128,12 +128,12 @@ end
 %  3. 公式 (19)：矩阵拆分 — A_z_omega 和 L_omega
 % ========================================================================
 
-Omega = length(indices_omega);
+n_omega = length(indices_omega);
 
-A_z_omega = cell(1, Omega);
-L_omega   = cell(1, Omega);
+A_z_omega = cell(1, n_omega);
+L_omega   = cell(1, n_omega);
 
-for omega = 1:Omega
+for omega = 1:n_omega
     idx = indices_omega{omega};          % 中心 ω 管辖的子系统索引
 
     % --- 状态行/列索引（按管辖子系统收集）---
@@ -203,8 +203,8 @@ if use_exact_Cg
     Sigma_r_all = C_g * Sigma_e * C_g' + Sigma_v_full;
 
     % --- 提取各区域残差协方差 ---
-    Sigma_r_omega = cell(1, Omega);
-    for omega = 1:Omega
+    Sigma_r_omega = cell(1, n_omega);
+    for omega = 1:n_omega
         idx = indices_omega{omega};
 
         % 收集中心 ω 管辖子系统对应的输出行索引
@@ -229,8 +229,8 @@ else
         '以误差协方差 Σ_e 近似残差协方差。后续 T² 阈值需基于实际残差校准。']);
     Sigma_r_all = Sigma_e;
 
-    Sigma_r_omega = cell(1, Omega);
-    for omega = 1:Omega
+    Sigma_r_omega = cell(1, n_omega);
+    for omega = 1:n_omega
         idx = indices_omega{omega};
 
         % 收集中心 ω 管辖子系统的状态行索引
@@ -248,8 +248,8 @@ end
 %  6. 输出维度汇总
 % ========================================================================
 
-fprintf('[split_matrices_and_cov] 拆分完成（%d 个计算中心）：\n', Omega);
-for omega = 1:Omega
+fprintf('[split_matrices_and_cov] 拆分完成（%d 个计算中心）：\n', n_omega);
+for omega = 1:n_omega
     fprintf('  中心 %d: A_z_omega = %d×%d, L_omega = %d×%d, Σ_r_ω = %d×%d\n', ...
         omega, ...
         size(A_z_omega{omega}, 1), size(A_z_omega{omega}, 2), ...

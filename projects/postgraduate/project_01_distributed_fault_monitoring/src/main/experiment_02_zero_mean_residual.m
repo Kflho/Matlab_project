@@ -50,7 +50,7 @@ create_model_1;
 [A_z, L] = solve_luenberger_lmi(A_g, C_g, Sigma_w, Sigma_v);
 
 % 1e. 计算中心划分
-Omega = 2;
+n_omega = 2;
 indices_omega = {[1, 3], [2, 4]};
 
 % 1f. 矩阵拆分与协方差计算（公式 19, 25-26）
@@ -71,7 +71,7 @@ Sigma_Delta = Sigma_w_full + L * Sigma_v_full * L';
 Sigma_e_y   = dlyap(A_z, Sigma_Delta);       % 用于 r_y（与 Split 内部一致）
 Sigma_e_s   = dlyap(A_z, Sigma_w_full);       % 用于 r_s（无测量噪声驱动）
 
-fprintf('  离线设计完成：Omega=%d, N_x=%d, N_y=%d\n', Omega, size(A_g,1), size(C_g,1));
+fprintf('  离线设计完成：n_omega=%d, N_x=%d, N_y=%d\n', n_omega, size(A_g,1), size(C_g,1));
 
 %% ============================================================
 %  2. 正常工况仿真数据生成（无故障注入）
@@ -152,11 +152,11 @@ for i = 1:n_s
 end
 
 % 为各中心预计算：局域状态行索引、C_{s,ω}、r_s 理论协方差
-rows_x_omega = cell(1, Omega);
-Cs_omega     = cell(1, Omega);
-Sigma_rs_omega = cell(1, Omega);  % r_s 理论协方差
+rows_x_omega = cell(1, n_omega);
+Cs_omega     = cell(1, n_omega);
+Sigma_rs_omega = cell(1, n_omega);  % r_s 理论协方差
 
-for omega = 1:Omega
+for omega = 1:n_omega
     idx = indices_omega{omega};
 
     % 局域状态行索引
@@ -207,7 +207,7 @@ all_passed = true;
 % 预存各分量结果供汇总表
 mean_results = struct();
 
-for omega = 1:Omega
+for omega = 1:n_omega
 
     fprintf('--- 中心 %d（管辖子系统 %s）---\n', omega, mat2str(indices_omega{omega}));
 
@@ -288,7 +288,7 @@ fprintf('\n--- 7. 可视化 ---\n');
 n_plot = min(300, T_sim);
 t_plot = (0:n_plot-1);
 
-for omega = 1:Omega
+for omega = 1:n_omega
 
     % ---- 7a. 输出残差 r_y 时序图 ----
     if ~isempty(r_y{omega})
@@ -368,7 +368,7 @@ fprintf('  绘图完成。蓝线为残差序列，红实线为样本均值，红
 fprintf('\n--- 8. 稳态统计（排除前 %d 步瞬态，T_steady=%d）---\n', ...
     transient_cut, T_steady);
 
-for omega = 1:Omega
+for omega = 1:n_omega
 
     fprintf('  中心 %d（管辖子系统 %s）:\n', omega, mat2str(indices_omega{omega}));
 
@@ -412,7 +412,7 @@ fprintf('  %-8s %-6s %-7s %-16s %-16s %-8s %s\n', ...
 fprintf('  %-8s %-6s %-7s %-16s %-16s %-8s %s\n', ...
     '----', '----', '-----', '--------------', '--------------', '--------', '----');
 
-for omega = 1:Omega
+for omega = 1:n_omega
     mr = mean_results(omega);
 
     for j = 1:mr.n_y_dim
@@ -450,7 +450,7 @@ fprintf(['  残差生成器基于 Luenberger 观测器结构（公式 15-18）�
 out_data = '../../outputs/experiment_02_zero_mean_residual/data/';
 if ~exist(out_data, 'dir'), mkdir(out_data); end
 save([out_data 'results.mat'], ...
-    'mean_results', 'Omega', 'indices_omega', 'T_sim', 'transient_cut', 'T_steady', ...
+    'mean_results', 'n_omega', 'indices_omega', 'T_sim', 'transient_cut', 'T_steady', ...
     'Sigma_r_omega', 'Sigma_rs_omega');
 fprintf('\n  产出已保存到 outputs/experiment_02_zero_mean_residual/\n');
 

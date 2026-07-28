@@ -22,7 +22,7 @@ fprintf('===== 1. 生成仿真数据 =====\n\n');
 
 % 直接加载 Model 1 与仿真参数（与 Start_simulation 保持一致）
 create_model_1;
-Omega = 2;
+n_omega = 2;
 indices_omega = {[1, 3], [2, 4]};
 T_sim   = 1000;
 k_fault = 500;

@@ -44,7 +44,7 @@ function [r_y, r_s, z_y_all, z_s_all] = compute_online_residuals(...
 %  1. 预处理：构建索引映射
 % ========================================================================
 
-Omega = length(indices_omega);
+n_omega = length(indices_omega);
 T_sim = size(u_seq, 2);
 
 % 状态索引映射
@@ -70,23 +70,23 @@ end
 % ========================================================================
 
 % 预分配
-B_z_omega  = cell(1, Omega);   % B_{z,ω}
-C_g_omega  = cell(1, Omega);   % C_{g,ω}
-D_g_omega  = cell(1, Omega);   % D_{g,ω}
-C_s_omega  = cell(1, Omega);   % C_{s,ω}
-D_s_omega  = cell(1, Omega);   % D_{s,ω}
-L_s_omega  = cell(1, Omega);   % L_{s,ω} = L_ω·C_{g,ω}·pinv(C_{s,ω})
+B_z_omega  = cell(1, n_omega);   % B_{z,ω}
+C_g_omega  = cell(1, n_omega);   % C_{g,ω}
+D_g_omega  = cell(1, n_omega);   % D_{g,ω}
+C_s_omega  = cell(1, n_omega);   % C_{s,ω}
+D_s_omega  = cell(1, n_omega);   % D_{s,ω}
+L_s_omega  = cell(1, n_omega);   % L_{s,ω} = L_ω·C_{g,ω}·pinv(C_{s,ω})
 
 % 每个中心的局域状态/输入/输出维度
-dim_x_omega = zeros(1, Omega);
-dim_y_omega = zeros(1, Omega);
-dim_s_omega = zeros(1, Omega);
+dim_x_omega = zeros(1, n_omega);
+dim_y_omega = zeros(1, n_omega);
+dim_s_omega = zeros(1, n_omega);
 
 % 信号提取的行索引
-state_idx_omega = cell(1, Omega);  % 状态行
-output_idx_omega = cell(1, Omega); % 输出行
+state_idx_omega = cell(1, n_omega);  % 状态行
+output_idx_omega = cell(1, n_omega); % 输出行
 
-for omega = 1:Omega
+for omega = 1:n_omega
     idx = indices_omega{omega};
 
     % ---- 状态行索引 ----
@@ -163,12 +163,12 @@ end
 %  3. 预分配存储
 % ========================================================================
 
-r_y = cell(1, Omega);
-r_s = cell(1, Omega);
-z_y_all = cell(1, Omega);
-z_s_all = cell(1, Omega);
+r_y = cell(1, n_omega);
+r_s = cell(1, n_omega);
+z_y_all = cell(1, n_omega);
+z_s_all = cell(1, n_omega);
 
-for omega = 1:Omega
+for omega = 1:n_omega
     r_y{omega}     = zeros(dim_y_omega(omega), T_sim);
     r_s{omega}     = zeros(dim_s_omega(omega), T_sim);
     z_y_all{omega} = zeros(dim_x_omega(omega), T_sim + 1);  % 包含初始状态
@@ -179,7 +179,7 @@ end
 %  4. 在线残差计算主循环
 % ========================================================================
 
-for omega = 1:Omega
+for omega = 1:n_omega
 
     % 局域矩阵
     Az_w = A_z_omega{omega};
@@ -252,8 +252,8 @@ end
 %  5. 输出汇总
 % ========================================================================
 
-fprintf('[compute_online_residuals] 残差计算完成（%d 个中心，%d 步）：\n', Omega, T_sim);
-for omega = 1:Omega
+fprintf('[compute_online_residuals] 残差计算完成（%d 个中心，%d 步）：\n', n_omega, T_sim);
+for omega = 1:n_omega
     fprintf('  中心 %d: r_y = %d×%d,  r_s = %d×%d\n', ...
         omega, size(r_y{omega}, 1), size(r_y{omega}, 2), ...
         size(r_s{omega}, 1), size(r_s{omega}, 2));

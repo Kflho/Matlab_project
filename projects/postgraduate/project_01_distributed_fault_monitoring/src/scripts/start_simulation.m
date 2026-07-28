@@ -27,7 +27,7 @@ addpath(genpath('../scripts/'));
 create_model_1;
 
 % ---- 计算中心划分 ----
-Omega = 2;
+n_omega = 2;
 indices_omega = {[1, 3], [2, 4]};
 
 % ---- 仿真参数 ----
@@ -154,7 +154,7 @@ save(save_file, ...
     'n_s', 'n_x', 'n_y', 'n_u', ...
     'A_g', 'B_g', 'C_g', 'D_g', 'K', 'x_eq', 'u_eq', ...
     'Sigma_w', 'Sigma_v', ...
-    'indices_omega', 'Omega');
+    'indices_omega', 'n_omega');
 
 fprintf('  数据已保存至: %s\n', fullfile(pwd, save_file));
 
@@ -173,7 +173,7 @@ for i = 1:n_s
 end
 fprintf('  噪声 w_seq:     %d × %d\n', size(w_seq, 1), size(w_seq, 2));
 fprintf('  噪声 v_seq:     %d × %d\n', size(v_seq, 1), size(v_seq, 2));
-fprintf('  计算中心:       %d 个\n', Omega);
+fprintf('  计算中心:       %d 个\n', n_omega);
 
 % ---- 快速验证：LQR 闭环稳定性 ----
 eig_cl = abs(eig(A_g - B_g * K));

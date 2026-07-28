@@ -36,9 +36,9 @@ fprintf('A_g = %d×%d, C_g = %d×%d\n', size(A_g, 1), size(A_g, 2), ...
 % ============================================================
 fprintf('\n===== 2. 计算中心配置 =====\n\n');
 
-Omega = 2;
+n_omega = 2;
 indices_omega = {[1, 3], [2, 4]};
-fprintf('Omega = %d\n', Omega);
+fprintf('n_omega = %d\n', n_omega);
 fprintf('中心 1: 子系统 %s\n', mat2str(indices_omega{1}));
 fprintf('中心 2: 子系统 %s\n', mat2str(indices_omega{2}));
 
@@ -113,7 +113,7 @@ fprintf('✓ 所有局域矩阵内容与手动索引提取一致\n');
 % ============================================================
 fprintf('\n===== 6. 验证局域 A_z_omega 的 Schur 稳定性 =====\n\n');
 
-for omega = 1:Omega
+for omega = 1:n_omega
     abs_eig = abs(eig(A_z_omega{omega}));
     fprintf('中心 %d: max|λ| = %.6f', omega, max(abs_eig));
     if all(abs_eig < 1)
@@ -177,7 +177,7 @@ fprintf('✓ Σ_r_all 计算正确\n');
 
 % 8d. Σ_r_omega 维度
 fprintf('\nΣ_r_omega 维度：\n');
-for omega = 1:Omega
+for omega = 1:n_omega
     fprintf('  中心 %d: %d×%d', omega, ...
         size(Sigma_r_omega{omega}, 1), size(Sigma_r_omega{omega}, 2));
     % 每个中心有 1 个传感器
@@ -187,7 +187,7 @@ for omega = 1:Omega
 end
 
 % 8e. Σ_r_omega 半正定性
-for omega = 1:Omega
+for omega = 1:n_omega
     eig_Sr_w = eig(Sigma_r_omega{omega});
     assert(all(eig_Sr_w >= -1e-12), ...
         sprintf('Σ_r_omega{%d} 不是半正定的', omega));
@@ -217,7 +217,7 @@ fprintf('回退模式 Σ_r_all 维度 = %d×%d（= Σ_e）\n', ...
     size(Sr_all_fallback, 1), size(Sr_all_fallback, 2));
 
 % 回退模式下 Σ_r_omega 维度 = 中心管辖的状态维度
-for omega = 1:Omega
+for omega = 1:n_omega
     assert(isequal(size(Sr_om_fallback{omega}), [2, 2]), ...
         sprintf('回退模式 Σ_r_omega{%d} 应为 2×2', omega));
     fprintf('  中心 %d: %d×%d  ✓\n', omega, ...

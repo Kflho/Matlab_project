@@ -32,7 +32,7 @@ n_x = [1, 1, 1, 1];
 [A_z, L] = solve_luenberger_lmi(A_g, C_g, Sigma_w, Sigma_v);
 
 % 矩阵拆分
-Omega = 2;
+n_omega = 2;
 indices_omega = {[1, 3], [2, 4]};
 [A_z_omega, L_omega, Sigma_r_omega, Sigma_r_all] = ...
     split_matrices_and_cov(A_z, L, indices_omega, Sigma_w, Sigma_v, C_g);
@@ -114,7 +114,7 @@ fprintf('r_y 维度: 中心1=%d×%d, 中心2=%d×%d  ✓\n', ...
 
 % 4b. 稳态均值检验（跳过前 50 步瞬态）
 skip = 51;
-for omega = 1:Omega
+for omega = 1:n_omega
     r_ss = r_y{omega}(:, skip:end);
     mean_r = mean(r_ss);
     fprintf('中心 %d: mean(r^y) = %.4e', omega, mean_r);
@@ -124,7 +124,7 @@ end
 
 % 4c. 经验协方差 vs 理论协方差
 fprintf('\n理论 vs 经验残差协方差：\n');
-for omega = 1:Omega
+for omega = 1:n_omega
     r_ss = r_y{omega}(:, skip:end);
     Sigma_r_emp = cov(r_ss');
     Sigma_r_th  = Sigma_r_omega{omega};
@@ -145,7 +145,7 @@ fprintf('r_s 维度: 中心1=%d×%d, 中心2=%d×%d  ✓\n', ...
     size(r_s{1},1), size(r_s{1},2), size(r_s{2},1), size(r_s{2},2));
 
 % 5b. 稳态均值
-for omega = 1:Omega
+for omega = 1:n_omega
     r_ss_s = r_s{omega}(:, skip:end);
     mean_r_s = mean(r_ss_s, 2);
     norm_mean = norm(mean_r_s);

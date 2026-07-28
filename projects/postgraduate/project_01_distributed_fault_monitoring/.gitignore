@@ -1,0 +1,16 @@
+# MATLAB
+*.m~
+*.mat
+*.fig
+*.mex*
+*.slxc
+*.slx.autosave
+slprj/
+__pycache__/
+*.pyc
+
+# 实验产出（数据大，不追踪）
+outputs/
+
+# Obsidian（不在代码仓内）
+.obsidian/

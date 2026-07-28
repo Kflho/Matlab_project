@@ -4,9 +4,9 @@
 
 ## 三文件路径
 
-- **Project 01 Note**: `D:\data\online\softwares\common\obsidian\datas\projects\universiy\postgraduate\1. plant-wide monitoring and fault localization for interaction-oriented distributed systems\pg 01 note.md`
-- **Project 01 参考文献**: `D:\data\online\softwares\common\obsidian\datas\projects\universiy\postgraduate\1. plant-wide monitoring and fault localization for interaction-oriented distributed systems\pg 01 参考文献.md`
-- **Project 01 Schedule**: `D:\data\online\softwares\common\obsidian\datas\projects\universiy\postgraduate\1. plant-wide monitoring and fault localization for interaction-oriented distributed systems\pg 01 schedule.md`
+- **Project 01 Note**: `D:\data\online\software\common\obsidian\data\projects\universiy\postgraduate\1. plant-wide monitoring and fault localization for interaction-oriented distributed systems\pg 01 note.md`
+- **Project 01 参考文献**: `D:\data\online\software\common\obsidian\data\projects\universiy\postgraduate\1. plant-wide monitoring and fault localization for interaction-oriented distributed systems\pg 01 参考文献.md`
+- **Project 01 Schedule**: `D:\data\online\software\common\obsidian\data\projects\universiy\postgraduate\1. plant-wide monitoring and fault localization for interaction-oriented distributed systems\pg 01 schedule.md`
 
 ## 项目映射
 
@@ -81,3 +81,5 @@ save([out_data 'results.mat'], ...);
 - [ ] experiment_05_coarse_localization.m
 - [ ] experiment_06_fine_localization.m
 - [ ] batch_experiments.m
+
+## SKILL INITIALIZED: true
