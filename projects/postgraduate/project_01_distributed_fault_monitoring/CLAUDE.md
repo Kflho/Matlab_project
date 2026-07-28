@@ -76,10 +76,17 @@ save([out_data 'results.mat'], ...);
 ### 实验
 - [x] experiment_01_decentralized_residual.m — 证明各计算中心可独立并行计算残差
 - [x] experiment_02_zero_mean_residual.m
-- [ ] experiment_03_t2_detection.m
-- [ ] experiment_04_detectability_bound.m
-- [ ] experiment_05_coarse_localization.m
-- [ ] experiment_06_fine_localization.m
-- [ ] batch_experiments.m
+- [x] experiment_03_t2_detection.m
+- [x] experiment_04_detectability_bound.m
+- [x] experiment_05_coarse_localization.m
+- [x] experiment_06_fine_localization.m
+- [x] batch_experiments.m
+
+## 运行须知
+
+- **运行目录**：必须 `cd` 到脚本所在目录（`src/main/` 或 `src/scripts/`）再运行，否则相对 `addpath` 解析错误
+- **Toolbox 依赖**：Control System Toolbox（`dlyap`）、Statistics Toolbox（`chi2inv`—若无则自动使用 `utils/chi2inv.m` fallback）、YALMIP+MOSEK（LMI 求解，无则回退 DARE）
+- **单独运行**：每个实验脚本内含 `clear`，不能串联调用。`batch_experiments.m` 是仪表盘（读取已有 `results.mat`），不是自动执行器
+- **格式化**：写完 `.m` 后运行 `fix_m_code.py <file> --apply`，AI 审查 diff（🔴`sim_w.Data` 等外部 API 属性名还原大写），确认无误后再跑
 
 ## SKILL INITIALIZED: true
