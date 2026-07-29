@@ -83,10 +83,25 @@ save([out_data 'results.mat'], ...);
 - [x] experiment_06_fine_localization.m
 - [x] batch_experiments.m
 
+## MATLAB 环境检测
+
+> 由 scientific-research skill 自动检测。每次写 MATLAB 脚本前核对。
+> 检测日期：2026-07-29
+> **检测方法**：`exist('func','file')` 检测实际安装。⚠️ `license('test',...)` 只查许可证不查安装，不可信。
+
+| Toolbox/工具 | 状态 | 级别 | 关键函数 | 缺失处理 |
+|---|---|---|---|---|
+| Control System Toolbox | ✅ | 🔴 刚需 | `dlyap`, `lyap`, `ss` | — |
+| Statistics Toolbox | ❌ | 🟢 可选 | `chi2inv`, `chi2cdf` | 需恢复 `utils/chi2inv.m` fallback |
+| YALMIP | ✅ | 🟡 便利 | `sdpvar`, `optimize` | — |
+| MOSEK | ✅ | 🟡 便利 | `mosekopt` | — |
+| Robust Control Toolbox | ❌ | 🟡 便利 | `hinfsyn`, `h2syn` | 当前项目未使用 |
+
+> **策略**：🔴 刚需缺失 → 阻断告知安装 | 🟡 便利缺失 → 建议安装+降级方案 | 🟢 可选缺失 → 自动 fallback
+
 ## 运行须知
 
 - **运行目录**：必须 `cd` 到脚本所在目录（`src/main/` 或 `src/scripts/`）再运行，否则相对 `addpath` 解析错误
-- **Toolbox 依赖**：Control System Toolbox（`dlyap`）、Statistics Toolbox（`chi2inv`—若无则自动使用 `utils/chi2inv.m` fallback）、YALMIP+MOSEK（LMI 求解，无则回退 DARE）
 - **单独运行**：每个实验脚本内含 `clear`，不能串联调用。`batch_experiments.m` 是仪表盘（读取已有 `results.mat`），不是自动执行器
 - **格式化（必须在跑之前完成）**：写 `.m` → 运行 `fix_m_code.py <file> --apply` → AI 审查 diff（🔴`sim_w.Data` 等外部 API 属性名还原大写 / 🟡变量名变更检查 / 🟢注释专有名词保护）→ 修正 → 跑。详见 `~/.claude/skills/scientific-research/references/scripts.md`
 
