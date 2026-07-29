@@ -92,7 +92,7 @@ save([out_data 'results.mat'], ...);
 | Toolbox/工具 | 状态 | 级别 | 关键函数 | 缺失处理 |
 |---|---|---|---|---|
 | Control System Toolbox | ✅ | 🔴 刚需 | `dlyap`, `lyap`, `ss` | — |
-| Statistics Toolbox | ❌ | 🟢 可选 | `chi2inv`, `chi2cdf` | 需恢复 `utils/chi2inv.m` fallback |
+| Statistics Toolbox | ✅ | 🟢 可选 | `chi2inv`, `chi2cdf` | — |
 | YALMIP | ✅ | 🟡 便利 | `sdpvar`, `optimize` | — |
 | MOSEK | ✅ | 🟡 便利 | `mosekopt` | — |
 | Robust Control Toolbox | ❌ | 🟡 便利 | `hinfsyn`, `h2syn` | 当前项目未使用 |
