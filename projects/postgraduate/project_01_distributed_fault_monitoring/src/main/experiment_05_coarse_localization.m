@@ -2,13 +2,13 @@
 %  目标：验证目标 3.1，验证粗定位可通过切断区域间 M_ij 交互链接，
 %        将故障源准确锁定在特定计算中心。
 %
-%  核心思路（论文第 III-C 节粗定位策略）：
+%  核心思路（论文第 Iii-C 节粗定位策略）：
 %    1. 故障发生后，其在子系统间的传播路径由 M_ij 链接定义
 %    2. 依次将每个非零 M_ij 置零（切断交互），重新设计观测器
 %    3. 使用同一组故障仿真数据，分别计算各中心在切断前后的 J_{T²,ω}
-%    4. 若切断某条链接后某中心的 J_T² 显著回落，说明故障通过该链
+%    4. 若切断某条链接后某中心的 J_t² 显著回落，说明故障通过该链
 %       接传播 → 该链接的发送端（sender）所在中心为故障源
-%    5. 若切断链接后某中心的 J_T² 仍保持高位 → 接收端（receiver）
+%    5. 若切断链接后某中心的 J_t² 仍保持高位 → 接收端（receiver）
 %       自身为故障源
 %
 %  四容水箱拓扑：
@@ -17,12 +17,12 @@
 %    无跨中心交互链接
 %
 %  粗定位规则：
-%    切断 M{1,3} → 观察中心 1 的 J_T² 变化：
-%      - J_T² 回落 → 故障源为子系统 3（sender）→ 故障在中心 1
-%      - J_T² 保持高位 → 故障源为子系统 1（receiver）→ 故障在中心 1
-%    切断 M{2,4} → 观察中心 2 的 J_T² 变化：
-%      - J_T² 回落 → 故障源为子系统 4（sender）→ 故障在中心 2
-%      - J_T² 保持高位 → 故障源为子系统 2（receiver）→ 故障在中心 2
+%    切断 M{1,3} → 观察中心 1 的 J_t² 变化：
+%      - J_t² 回落 → 故障源为子系统 3（sender）→ 故障在中心 1
+%      - J_t² 保持高位 → 故障源为子系统 1（receiver）→ 故障在中心 1
+%    切断 M{2,4} → 观察中心 2 的 J_t² 变化：
+%      - J_t² 回落 → 故障源为子系统 4（sender）→ 故障在中心 2
+%      - J_t² 保持高位 → 故障源为子系统 2（receiver）→ 故障在中心 2
 %
 %    粗定位级别（计算中心）：综合基线检测与切断分析，判定故障所在中心。
 %
@@ -139,12 +139,12 @@ result.fault_subsys    = cell(1, n_fault_cases);
 result.actual_center   = zeros(1, n_fault_cases);
 result.identified_center = zeros(1, n_fault_cases);
 result.is_correct      = zeros(1, n_fault_cases);
-result.baseline_mean_y = cell(1, n_fault_cases);   % 基线 J_T²_y 故障后均值
-result.baseline_mean_s = cell(1, n_fault_cases);   % 基线 J_T²_s 故障后均值
-result.cut13_mean_y    = cell(1, n_fault_cases);   % 切断 M{1,3} 后 J_T²_y 故障后均值
-result.cut24_mean_y    = cell(1, n_fault_cases);   % 切断 M{2,4} 后 J_T²_y 故障后均值
-result.reduction_13    = zeros(1, n_fault_cases);  % 中心 1 的 J_T² 回落比例
-result.reduction_24    = zeros(1, n_fault_cases);  % 中心 2 的 J_T² 回落比例
+result.baseline_mean_y = cell(1, n_fault_cases);   % 基线 J_t²_y 故障后均值
+result.baseline_mean_s = cell(1, n_fault_cases);   % 基线 J_t²_s 故障后均值
+result.cut13_mean_y    = cell(1, n_fault_cases);   % 切断 M{1,3} 后 J_t²_y 故障后均值
+result.cut24_mean_y    = cell(1, n_fault_cases);   % 切断 M{2,4} 后 J_t²_y 故障后均值
+result.reduction_13    = zeros(1, n_fault_cases);  % 中心 1 的 J_t² 回落比例
+result.reduction_24    = zeros(1, n_fault_cases);  % 中心 2 的 J_t² 回落比例
 result.baseline_detected = cell(1, n_fault_cases); % 基线检测结果
 
 % 仿真噪声（所有故障场景共用同一组噪声实现）
@@ -233,7 +233,7 @@ for fi = 1:n_fault_cases
             fault_subsys, fault_magnitude_s, k_fault);
     end
 
-    %% ---- 4b. 基线 J_T² 计算（原始 M 观测器）----
+    %% ---- 4b. 基线 J_t² 计算（原始 M 观测器）----
     fprintf('    4b. 基线 J_T²（原始 M 观测器）...\n');
 
     [J_T2_y_base, J_T2_s_base, J_th_y, J_th_s] = compute_J_T2_on_data(...
@@ -259,7 +259,7 @@ for fi = 1:n_fault_cases
     result.baseline_mean_y{fi} = baseline_mean_y_omega;
     result.baseline_mean_s{fi} = baseline_mean_s_omega;
 
-    % 基线检测：哪些中心 J_T² > 门限
+    % 基线检测：哪些中心 J_t² > 门限
     detected_omega = [];
     for omega = 1:n_omega
         if ~isempty(J_T2_y_base{omega}) && ~isnan(J_th_y(omega))
@@ -272,7 +272,7 @@ for fi = 1:n_fault_cases
     result.baseline_detected{fi} = detected_omega;
     fprintf('      基线检测到故障的中心: [%s]\n', num2str(detected_omega));
 
-    %% ---- 4c. 切断 M{1,3} 后的 J_T² ----
+    %% ---- 4c. 切断 M{1,3} 后的 J_t² ----
     fprintf('    4c. J_T²（切断 M{1,3}=0 观测器）...\n');
 
     [J_T2_y_cut13, J_T2_s_cut13] = compute_J_T2_on_data(...
@@ -301,7 +301,7 @@ for fi = 1:n_fault_cases
     fprintf('      中心 1 回落比例（M{1,3} 切断）= %.4f (%.1f%%)\n', ...
         result.reduction_13(fi), result.reduction_13(fi)*100);
 
-    %% ---- 4d. 切断 M{2,4} 后的 J_T² ----
+    %% ---- 4d. 切断 M{2,4} 后的 J_t² ----
     fprintf('    4d. J_T²（切断 M{2,4}=0 观测器）...\n');
 
     [J_T2_y_cut24, J_T2_s_cut24] = compute_J_T2_on_data(...
@@ -332,7 +332,7 @@ for fi = 1:n_fault_cases
 
     %% ---- 4e. 粗定位决策 ----
     % 定位逻辑：
-    %   1. 基线检测：J_T² 故障后稳态均值 > 门限 → 故障在该中心可检测
+    %   1. 基线检测：J_t² 故障后稳态均值 > 门限 → 故障在该中心可检测
     %   2. 切断分析：回落比例较小的中心更可能为故障源
     %      （故障源所在中心，切断内部链接不会消除故障信号）
     %   3. 综合判定：取基线检测与切断分析的一致性结论
@@ -448,14 +448,14 @@ for fi = 1:n_fault_cases
 end
 
 %% ============================================================
-%  7. 可视化：J_T² 对比柱状图
+%  7. 可视化：J_t² 对比柱状图
 % ============================================================
 fprintf('\n--- 7. 可视化 ---\n');
 
 out_pic = '../../outputs/experiment_05_coarse_localization/figures/';
 if ~exist(out_pic, 'dir'), mkdir(out_pic); end
 
-% ---- 7a. 各故障场景的 J_T² 对比柱状图（每中心一组）----
+% ---- 7a. 各故障场景的 J_t² 对比柱状图（每中心一组）----
 for fi = 1:n_fault_cases
 
     fault_subsys = result.fault_subsys{fi};
@@ -496,10 +496,14 @@ end
 % ---- 7b. 回落比例对比图 ----
 figh_reduction = figure('Name', '实验05-回落比例对比', 'NumberTitle', 'off');
 
-reduction_matrix = [result.reduction_13_fmc_0 * 100];
-b2 = bar(reduction_matrix, 'grouped');
-b2(1).FaceColor = [0.2 0.4 0.8];
-b2(2).FaceColor = [0.9 0.5 0.1];
+reduction_matrix = [result.reduction_13 * 100; result.reduction_24 * 100]';
+if size(reduction_matrix, 2) >= 2
+    b2 = bar(reduction_matrix, 'grouped');
+    b2(1).FaceColor = [0.2 0.4 0.8];
+    b2(2).FaceColor = [0.9 0.5 0.1];
+else
+    bar(reduction_matrix);
+end
 
 set(gca, 'XTickLabel', arrayfun(@(s) sprintf('子系统 %d', s), ...
     fault_subsys_list, 'UniformOutput', false));
@@ -650,7 +654,7 @@ end
 
 function [J_T2_y, J_T2_s, J_th_y, J_th_s] = compute_J_T2_on_data(...
     u_seq, y_seq, s_cell, obs, info, indices_omega, n_x, n_y, n_s, T_sim)
-% compute_j_t2_on_data  使用给定观测器对故障仿真数据计算 J_T² 统计量
+% compute_j_t2_on_data  使用给定观测器对故障仿真数据计算 J_t² 统计量
 %
 %   inputs:
 %     u_seq, y_seq, s_cell — 仿真时间序列
@@ -658,7 +662,7 @@ function [J_T2_y, J_T2_s, J_th_y, J_th_s] = compute_J_T2_on_data(...
 %     info  — 子系统信息（C_s, D_s, n_x, n_y, n_s）
 %
 %   outputs:
-%     J_t2_y, J_t2_s — 各中心 J_T² 时间序列
+%     J_t2_y, J_t2_s — 各中心 J_t² 时间序列
 %     J_th_y, J_th_s — 各中心 χ² 门限（α=0.99）
 
     n_omega = length(indices_omega);
@@ -712,7 +716,7 @@ function [J_T2_y, J_T2_s, J_th_y, J_th_s] = compute_J_T2_on_data(...
         end
     end
 
-    % 计算 J_T² 时间序列（公式 27）
+    % 计算 J_t² 时间序列（公式 27）
     J_T2_y = cell(1, n_omega);
     J_T2_s = cell(1, n_omega);
 

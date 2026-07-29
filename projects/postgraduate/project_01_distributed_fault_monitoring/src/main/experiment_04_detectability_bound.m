@@ -4,7 +4,7 @@
 %        幅值从 0 逐步增大，每个幅值做 N_mc 次蒙特卡洛仿真，统计检出率。
 %
 %  核心验证逻辑：
-%    1. 离线设计：完成 Model 1→2→组装→LMI→拆分的完整链路
+%    1. 离线设计：完成 model 1→2→组装→LMI→拆分的完整链路
 %    2. 阈值计算：J_{th,ω} = chi2inv(0.99, dim_ω)  各中心独立门限
 %    3. 蒙特卡洛：对每个故障幅值/类型，重复 N_mc 次
 %       - 不同噪声种子生成正常工况仿真数据
@@ -12,7 +12,7 @@
 %       - 计算各中心残差与 J_{T^2,ω}(k)（公式 27）
 %       - 检查 k ≥ k_fault 后是否有 J_{T^2,ω} 超过 J_{th,ω}
 %    4. 统计：故障幅值—检出率曲线，检出延迟分布
-%    5. 理论边界：基于 DC 增益推导近似理论界，与经验边界对比
+%    5. 理论边界：基于 Dc 增益推导近似理论界，与经验边界对比
 %
 %  验收标准：
 %    运行后报告不同故障幅值下的实际检出率，与理论边界对比。
@@ -36,10 +36,10 @@ addpath(genpath('../scripts/'));
 fprintf('========== 实验 04：故障可检测性边界验证 ==========\n\n');
 fprintf('--- 1. 离线设计 ---\n');
 
-% 1a. 加载 Model 1
+% 1a. 加载 model 1
 create_model_1;
 
-% 1b. Model 1 → Model 2（公式 7-10）
+% 1b. model 1 → model 2（公式 7-10）
 [A_bar, B_bar, C_bar, D_bar] = ...
     model_1_to_model_2(A, B, C, D, E, F, C_s, D_s, M, N);
 
@@ -121,7 +121,7 @@ end
 
 % r_s 协方差与门限
 rows_x_omega   = cell(1, n_omega);
-Cs_omega       = cell(1, n_omega);
+cs_omega       = cell(1, n_omega);
 Sigma_rs_omega = cell(1, n_omega);
 J_th_rs        = zeros(1, n_omega);
 dim_rs         = zeros(1, n_omega);
@@ -137,22 +137,22 @@ for omega = 1:n_omega
     rows_x_omega{omega} = rx;
 
     % C_{s,ω} = blkdiag(C_s{idx})
-    Cs_blocks = {};
+    cs_blocks = {};
     for s_local = idx
         if ~isempty(C_s{s_local})
-            Cs_blocks{end+1} = C_s{s_local}; %#ok<AGROW>
+            cs_blocks{end+1} = C_s{s_local}; %#ok<AGROW>
         end
     end
-    if ~isempty(Cs_blocks)
-        Cs_omega{omega} = blkdiag(Cs_blocks{:});
+    if ~isempty(cs_blocks)
+        cs_omega{omega} = blkdiag(cs_blocks{:});
     else
-        Cs_omega{omega} = [];
+        cs_omega{omega} = [];
     end
 
     % r_s 理论协方差：Σ_{r_s,ω} = C_{s,ω} · Σ_{e,s,ω} · C_{s,ω}'
     Sigma_e_s_omega = Sigma_e_s(rx, rx);
-    if ~isempty(Cs_omega{omega})
-        Sigma_rs_omega{omega} = Cs_omega{omega} * Sigma_e_s_omega * Cs_omega{omega}';
+    if ~isempty(cs_omega{omega})
+        Sigma_rs_omega{omega} = cs_omega{omega} * Sigma_e_s_omega * cs_omega{omega}';
     else
         Sigma_rs_omega{omega} = [];
     end
@@ -195,7 +195,7 @@ fprintf('  执行器故障幅值范围: [%.4f, %.4f]\n', ...
 % 预分配检测结果存储
 detect_rate_sensor   = zeros(1, n_mag);   % 传感器故障检出率
 detect_rate_actuator = zeros(1, n_mag);   % 执行器故障检出率
-detect_delay_sensor  = cell(1, n_mag);    % 传感器故障检出延迟（各 MC run）
+detect_delay_sensor  = cell(1, n_mag);    % 传感器故障检出延迟（各 Mc run）
 detect_delay_actuator = cell(1, n_mag);   % 执行器故障检出延迟
 
 % 噪声协方差矩阵（用于直接生成噪声）
@@ -461,133 +461,103 @@ else
 end
 
 %% ============================================================
-%  8. 理论边界计算（基于 DC 增益近似）
+%  8. 理论边界计算（基于 Dc 增益近似）
 % ============================================================
 fprintf('\n--- 8. 理论边界计算（DC 增益近似）---\n');
 fprintf('  注：以下为基于局部模型的 DC 增益近似，精确理论界需进一步推导。\n\n');
 
-% ---- 8a. 传感器故障理论边界 ----
-%   公式 (31): |f_y| > √(2·J_{th,ω}) / ‖Σ_{r,ω}^{-1/2} · G_{z,ω} · Ψ_y‖
-%
-%   对于恒定故障，取 DC 增益 G_f(1) = I - C_g·(I-A_z)^{-1}·L
-%   局域化到中心 ω：G_f,ω(1) = I - C_{g,ω}·(I-A_{z,ω})^{-1}·L_ω
-%
-%   传感器故障方向：Ψ_y 指向故障注入位置
-%   对于注入子系统 1，在全局输出子空间：Ψ_y = e_{y1}（第一标准基向量）
+try
+    % ---- 8a. 传感器故障理论边界 ----
+    %   公式 (31): |f_y| > √(2·J_{th,ω}) / ‖Σ_{r,ω}^{-1/2} · G_{z,ω} · Ψ_y‖
 
-% 构建全局 C_g 和 L 的局域版本（与 compute_online_residuals 一致）
-[~, C_g_omega_local, ~, ~, ~, ~, ~, ~] = build_local_matrices(...
-    A_z_omega, L_omega, B_g_sys, C_g_sys, D_g_sys, C_s, D_s, ...
-    indices_omega, n_x, n_y, n_s);
+    % 构建全局 C_g 和 L 的局域版本（与 compute_online_residuals 一致）
+    [~, C_g_omega_local, ~, ~, ~, ~, ~, ~] = build_local_matrices(...
+        A_z_omega, L_omega, B_g_sys, C_g_sys, D_g_sys, C_s, D_s, ...
+        indices_omega, n_x, n_y, n_s);
 
-% 传感器故障 DC 增益（对中心 1，因为它管辖有传感器的子系统 1）
-omega_sensor = find(cellfun(@(idx) ismember(fault_subsys_sensor, idx), indices_omega));
-fprintf('  传感器故障影响中心: %d（管辖子系统 %s）\n', ...
-    omega_sensor, mat2str(indices_omega{omega_sensor}));
+    omega_sensor = find(cellfun(@(idx) ismember(fault_subsys_sensor, idx), indices_omega));
+    fprintf('  传感器故障影响中心: %d（管辖子系统 %s）\n', ...
+        omega_sensor, mat2str(indices_omega{omega_sensor}));
 
-A_z_loc = A_z_omega{omega_sensor};
-C_g_loc = C_g_omega_local{omega_sensor};
-L_loc   = L_omega{omega_sensor};
-Sigma_r_loc = Sigma_r_omega{omega_sensor};
+    A_z_loc = A_z_omega{omega_sensor};
+    C_g_loc = C_g_omega_local{omega_sensor};
+    L_loc   = L_omega{omega_sensor};
+    Sigma_r_loc = Sigma_r_omega{omega_sensor};
 
-if ~isempty(C_g_loc) && ~isempty(L_loc) && ~isempty(Sigma_r_loc)
-    % DC 增益矩阵: G_f = I - C_g_loc * (I - A_z_loc)^{-1} * L_loc
-    I_az = eye(size(A_z_loc));
-    G_f_dc = eye(size(C_g_loc, 1)) - C_g_loc * (I_az - A_z_loc) \ L_loc;
+    if ~isempty(C_g_loc) && ~isempty(L_loc) && ~isempty(Sigma_r_loc)
+        I_az = eye(size(A_z_loc));
+        G_f_dc = eye(size(C_g_loc, 1)) - C_g_loc * ((I_az - A_z_loc) \ L_loc);
 
-    % 故障方向：传感器故障影响 y_1（中心 1 的输出第一个分量）
-    % 由于 y_1 是中心 1 的唯一天量输出，fault_subsys=1 输出在全局 y 的第 1 行
-    % 局域 y 的索引取决于 output_rows 构建
-    Psi_y = zeros(size(C_g_loc, 1), 1);
-    Psi_y(1) = 1;  % 假设故障注入在局域输出的第一个分量
+        psi_y = zeros(size(C_g_loc, 1), 1);
+        psi_y(1) = 1;
 
-    % Σ_r^{-1/2}
-    Sigma_r_inv_sqrt = Sigma_r_loc^(-1/2);  % 对称平方根逆
+        Sigma_r_inv_sqrt = Sigma_r_loc^(-1/2);
+        G_eff = Sigma_r_inv_sqrt * G_f_dc * psi_y;
+        norm_g_eff = norm(G_eff);
 
-    % 有效增益范数
-    G_eff = Sigma_r_inv_sqrt * G_f_dc * Psi_y;
-    norm_G_eff = norm(G_eff);
-
-    if norm_G_eff > 1e-12
-        mag_theory_bound_sensor = sqrt(2 * J_th_ry(omega_sensor)) / norm_G_eff;
-        fprintf('  传感器故障 DC 增益范数 ‖Σ_r^{-1/2}·G_f(I)·Ψ_y‖ = %.6f\n', norm_G_eff);
-        fprintf('  传感器故障理论边界（公式 31 近似）: |f_y| > %.6f\n', ...
-            mag_theory_bound_sensor);
+        if norm_g_eff > 1e-12
+            mag_theory_bound_sensor = sqrt(2 * J_th_ry(omega_sensor)) / norm_g_eff;
+            fprintf('  传感器故障 DC 增益范数 ‖Σ_r^{-1/2}·G_f(I)·Ψ_y‖ = %.6f\n', norm_g_eff);
+            fprintf('  传感器故障理论边界（公式 31 近似）: |f_y| > %.6f\n', mag_theory_bound_sensor);
+        else
+            mag_theory_bound_sensor = inf;
+            fprintf('  传感器故障 DC 增益接近于零，理论边界 → ∞（可能数值问题）\n');
+        end
     else
         mag_theory_bound_sensor = inf;
-        fprintf('  传感器故障 DC 增益接近于零，理论边界 → ∞（可能数值问题）\n');
+        fprintf('  传感器故障理论边界: 无法计算（局域矩阵为空）\n');
     end
-else
-    mag_theory_bound_sensor = inf;
-    fprintf('  传感器故障理论边界: 无法计算（局域矩阵为空）\n');
-end
 
-% ---- 8b. 执行器故障理论边界 ----
-%   公式 (32): |f_u| > √(2·J_{th,ω}) / ‖Σ_{r,ω}^{-1/2} · D_{z,ω} · Ψ_u‖
-%
-%   执行器故障路径：u → 残差 r 的 DC 增益
-%   G_u(I) = -(C_g·(I-A_z)^{-1}·B_z + D_g)
-%   局域化：G_u,ω(I) = -(C_{g,ω}·(I-A_{z,ω})^{-1}·B_{z,ω} + D_{g,ω})
-%
-%   执行器故障方向 Ψ_u：inject_fault 对 u 的所有分量叠加相同幅值
-%   → Ψ_u = [1; 1]（归一化前）
+    % ---- 8b. 执行器故障理论边界 ----
+    [~, omega_best_actuator] = max(dim_ry);
+    fprintf('\n  执行器故障分析中心: %d（管辖子系统 %s, r_y 维度=%d）\n', ...
+        omega_best_actuator, mat2str(indices_omega{omega_best_actuator}), dim_ry(omega_best_actuator));
 
-% 选择输出维度最大的中心（对执行器故障更敏感）
-[~, omega_best_actuator] = max(dim_ry);
+    A_z_loc_u = A_z_omega{omega_best_actuator};
+    C_g_loc_u = C_g_omega_local{omega_best_actuator};
+    L_loc_u   = L_omega{omega_best_actuator};
+    Sigma_r_loc_u = Sigma_r_omega{omega_best_actuator};
 
-fprintf('\n  执行器故障分析中心: %d（管辖子系统 %s, r_y 维度=%d）\n', ...
-    omega_best_actuator, mat2str(indices_omega{omega_best_actuator}), ...
-    dim_ry(omega_best_actuator));
+    if ~isempty(C_g_loc_u) && ~isempty(L_loc_u) && ~isempty(Sigma_r_loc_u)
+        rows_x_u = rows_x_omega{omega_best_actuator};
+        B_g_loc_u = B_g_sys(rows_x_u, :);
 
-A_z_loc_u = A_z_omega{omega_best_actuator};
-C_g_loc_u = C_g_omega_local{omega_best_actuator};
-D_g_loc_u = D_g_sys;  % 需要局域化
-L_loc_u   = L_omega{omega_best_actuator};
-Sigma_r_loc_u = Sigma_r_omega{omega_best_actuator};
-
-if ~isempty(C_g_loc_u) && ~isempty(L_loc_u) && ~isempty(Sigma_r_loc_u)
-    % 局域 B_z = B_g_loc - L_loc * D_g_loc
-    rows_x_u = rows_x_omega{omega_best_actuator};
-    B_g_loc_u = B_g_sys(rows_x_u, :);
-
-    % 局域输出行索引
-    rows_y_u = [];
-    cum_ny = [0, cumsum(n_y)];
-    for s_local = indices_omega{omega_best_actuator}
-        if n_y(s_local) > 0
-            rows_y_u = [rows_y_u, (cum_ny(s_local)+1):cum_ny(s_local+1)]; %#ok<AGROW>
+        rows_y_u = [];
+        cum_ny = [0, cumsum(n_y)];
+        for s_local = indices_omega{omega_best_actuator}
+            if n_y(s_local) > 0
+                rows_y_u = [rows_y_u, (cum_ny(s_local)+1):cum_ny(s_local+1)]; %#ok<AGROW>
+            end
         end
-    end
-    D_g_loc_u = D_g_sys(rows_y_u, :);
+        D_g_loc_u = D_g_sys(rows_y_u, :);
 
-    B_z_loc_u = B_g_loc_u - L_loc_u * D_g_loc_u;
+        B_z_loc_u = B_g_loc_u - L_loc_u * D_g_loc_u;
 
-    % DC 增益: G_u(I) = -(C_g_loc * (I - A_z_loc)^{-1} * B_z_loc + D_g_loc)
-    I_az_u = eye(size(A_z_loc_u));
-    G_u_dc = -(C_g_loc_u * (I_az_u - A_z_loc_u) \ B_z_loc_u + D_g_loc_u);
+        I_az_u = eye(size(A_z_loc_u));
+        G_u_dc = -(C_g_loc_u * ((I_az_u - A_z_loc_u) \ B_z_loc_u) + D_g_loc_u);
 
-    % 执行器故障方向：Ψ_u = [1; 1]（两个泵同时受力）
-    Psi_u = ones(N_u, 1);
+        psi_u = ones(N_u, 1);
+        Sigma_r_inv_sqrt_u = Sigma_r_loc_u^(-1/2);
+        G_eff_u = Sigma_r_inv_sqrt_u * G_u_dc * psi_u;
+        norm_g_eff_u = norm(G_eff_u);
 
-    % Σ_r^{-1/2}
-    Sigma_r_inv_sqrt_u = Sigma_r_loc_u^(-1/2);
-
-    % 有效增益范数
-    G_eff_u = Sigma_r_inv_sqrt_u * G_u_dc * Psi_u;
-    norm_G_eff_u = norm(G_eff_u);
-
-    if norm_G_eff_u > 1e-12
-        mag_theory_bound_actuator = sqrt(2 * J_th_ry(omega_best_actuator)) / norm_G_eff_u;
-        fprintf('  执行器故障 DC 增益范数 ‖Σ_r^{-1/2}·G_u(I)·Ψ_u‖ = %.6f\n', norm_G_eff_u);
-        fprintf('  执行器故障理论边界（公式 32 近似）: |f_u| > %.6f\n', ...
-            mag_theory_bound_actuator);
+        if norm_g_eff_u > 1e-12
+            mag_theory_bound_actuator = sqrt(2 * J_th_ry(omega_best_actuator)) / norm_g_eff_u;
+            fprintf('  执行器故障 DC 增益范数 ‖Σ_r^{-1/2}·G_u(I)·Ψ_u‖ = %.6f\n', norm_g_eff_u);
+            fprintf('  执行器故障理论边界（公式 32 近似）: |f_u| > %.6f\n', mag_theory_bound_actuator);
+        else
+            mag_theory_bound_actuator = inf;
+            fprintf('  执行器故障 DC 增益接近于零，理论边界 → ∞（可能数值问题）\n');
+        end
     else
         mag_theory_bound_actuator = inf;
-        fprintf('  执行器故障 DC 增益接近于零，理论边界 → ∞（可能数值问题）\n');
+        fprintf('  执行器故障理论边界: 无法计算（局域矩阵为空）\n');
     end
-else
+catch ME
+    fprintf('\n  *** 理论边界计算失败: %s ***\n', ME.message);
+    fprintf('  *** 使用经验边界作为替代。***\n');
+    mag_theory_bound_sensor = inf;
     mag_theory_bound_actuator = inf;
-    fprintf('  执行器故障理论边界: 无法计算（局域矩阵为空）\n');
 end
 
 %% ============================================================
@@ -993,8 +963,8 @@ end
 
 
 function boxplot_grouped(data_cell, labels)
-% boxplot_grouped  用 cell 数据绘制分组箱线图（兼容无 Statistics Toolbox 的情况）
-%   当 Statistics Toolbox 不可用时，回退到简化的均值和范围图。
+% boxplot_grouped  用 cell 数据绘制分组箱线图（兼容无 statistics toolbox 的情况）
+%   当 statistics toolbox 不可用时，回退到简化的均值和范围图。
 
 if exist('boxplot', 'file') == 2
     % 将 cell 数据转为分组向量

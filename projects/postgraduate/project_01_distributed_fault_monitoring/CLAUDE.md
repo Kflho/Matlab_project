@@ -88,6 +88,6 @@ save([out_data 'results.mat'], ...);
 - **运行目录**：必须 `cd` 到脚本所在目录（`src/main/` 或 `src/scripts/`）再运行，否则相对 `addpath` 解析错误
 - **Toolbox 依赖**：Control System Toolbox（`dlyap`）、Statistics Toolbox（`chi2inv`—若无则自动使用 `utils/chi2inv.m` fallback）、YALMIP+MOSEK（LMI 求解，无则回退 DARE）
 - **单独运行**：每个实验脚本内含 `clear`，不能串联调用。`batch_experiments.m` 是仪表盘（读取已有 `results.mat`），不是自动执行器
-- **格式化**：写完 `.m` 后运行 `fix_m_code.py <file> --apply`，AI 审查 diff（🔴`sim_w.Data` 等外部 API 属性名还原大写），确认无误后再跑
+- **格式化（必须在跑之前完成）**：写 `.m` → 运行 `fix_m_code.py <file> --apply` → AI 审查 diff（🔴`sim_w.Data` 等外部 API 属性名还原大写 / 🟡变量名变更检查 / 🟢注释专有名词保护）→ 修正 → 跑。详见 `~/.claude/skills/scientific-research/references/scripts.md`
 
 ## SKILL INITIALIZED: true

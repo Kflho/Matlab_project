@@ -1,20 +1,20 @@
-%% experiment_06_fine_localization.m  实验 06 — 精定位（Fine Localization）
+%% experiment_06_fine_localization.m  实验 06 — 精定位（fine localization）
 %  目标：验证目标 3.2，在粗定位锁定的中心内，利用 cut-and-observe
-%        策略按 Table I 逻辑准确定位故障子系统；同时演示递归联合
+%        策略按 table I 逻辑准确定位故障子系统；同时演示递归联合
 %        滤波器（recursive_joint_filter）单步运行。
 %
 %  核心验证逻辑：
-%    1. 离线设计：完成 Model 1→2→组装→LMI→拆分→Model 3 的完整链路
+%    1. 离线设计：完成 model 1→2→组装→LMI→拆分→model 3 的完整链路
 %    2. 仿真：对子系统 1、2 分别注入传感器故障（k_fault=200, magnitude=0.3）
-%    3. 粗定位：J_T²_y 统计量识别故障中心
+%    3. 粗定位：J_t²_y 统计量识别故障中心
 %    4. 精定位（cut-and-observe）：
 %       - 在锁定中心内依次切断各候选子系统的信息
-%       - 每次切断后重新计算残差与 J_T²
-%       - 导致合作伙伴 J_T² 下降最大的子系统 → 故障源
+%       - 每次切断后重新计算残差与 J_t²
+%       - 导致合作伙伴 J_t² 下降最大的子系统 → 故障源
 %    5. 递归联合滤波器单步演示（recursive_joint_filter）
 %    6. 报告精定位准确率
 %
-%  验收标准：运行后报告精定位实际正确率（故障源头子系统 ID 被唯一确定的比例）
+%  验收标准：运行后报告精定位实际正确率（故障源头子系统 Id 被唯一确定的比例）
 %
 %  依赖：
 %    src/lib/     — model_1_to_model_2, assemble_global_model, solve_luenberger_lmi,
@@ -55,7 +55,7 @@ n_omega = 2;
 indices_omega = {[1, 3], [2, 4]};
 
 % 1f. 矩阵拆分与协方差计算（公式 19, 25-26）
-%     Sigma_r_omega 为各中心输出残差 r_y 的理论协方差
+%     sigma_r_omega 为各中心输出残差 r_y 的理论协方差
 [A_z_omega, L_omega, Sigma_r_omega, Sigma_r_all] = ...
     split_matrices_and_cov(A_z, L, indices_omega, Sigma_w, Sigma_v, C_g);
 
@@ -246,7 +246,7 @@ for f_idx = 1:n_fault_cases
         indices_omega, n_x, n_y, n_s);
 
     %% --------------------------------------------------------
-    %  4c. J_T² 统计量计算
+    %  4c. J_t² 统计量计算
     %% --------------------------------------------------------
     fprintf('  --- 4c. J_{T²} 统计量计算 ---\n');
 
@@ -282,7 +282,7 @@ for f_idx = 1:n_fault_cases
             J_T2_s{omega} = [];
         end
 
-        % ---- 组合 J_T²（用于精定位比较）----
+        % ---- 组合 J_t²（用于精定位比较）----
         J_comb = zeros(1, T_sim);
         if ~isempty(J_T2_y{omega})
             J_comb = J_comb + J_T2_y{omega};
@@ -321,7 +321,7 @@ for f_idx = 1:n_fault_cases
     %% --------------------------------------------------------
     fprintf('  --- 4e. 粗定位 ---\n');
 
-    % 计算各中心在故障后稳态期的 J_T²_y 均值
+    % 计算各中心在故障后稳态期的 J_t²_y 均值
     k_steady_start = k_fault + transient_cut;
     if k_steady_start >= T_sim
         k_steady_start = k_fault + 10;
@@ -337,15 +337,15 @@ for f_idx = 1:n_fault_cases
         end
     end
 
-    % 粗定位规则：J_T²_y 均值超过门限且最大的中心为故障中心
+    % 粗定位规则：J_t²_y 均值超过门限且最大的中心为故障中心
     exceed_threshold = J_T2_y_post > J_th_y;
     exceed_threshold(isnan(exceed_threshold)) = false;
 
     if any(exceed_threshold)
-        % 在超过门限的中心中选 J_T² 最大的
+        % 在超过门限的中心中选 J_t² 最大的
         [~, omega_faulty] = max(J_T2_y_post .* exceed_threshold);
     else
-        % 回退：选 J_T²_y 最大的中心
+        % 回退：选 J_t²_y 最大的中心
         [~, omega_faulty] = max(J_T2_y_post);
         fprintf('    警告：无中心 J_{T²,y} 超过门限，回退到最大值规则。\n');
     end
@@ -369,10 +369,10 @@ for f_idx = 1:n_fault_cases
     n_candidates = length(center_subsystems);
 
     % 存储每个候选子系统被切断后的结果
-    cut_J_T2_mean = zeros(1, n_candidates);   % 切断后的 J_T² 均值
-    cut_J_T2_drop = zeros(1, n_candidates);   % J_T² 下降量
+    cut_J_T2_mean = zeros(1, n_candidates);   % 切断后的 J_t² 均值
+    cut_J_T2_drop = zeros(1, n_candidates);   % J_t² 下降量
 
-    % 全配置下的 J_T² 故障后均值（基准）
+    % 全配置下的 J_t² 故障后均值（基准）
     full_J_T2_combined_post = mean(J_T2_combined{omega_faulty}(k_steady_range));
 
     for c_idx = 1:n_candidates
@@ -398,7 +398,7 @@ for f_idx = 1:n_fault_cases
             B_g_sys, C_g_sys, D_g_sys, C_s, D_s, ...
             indices_omega, n_x, n_y, n_s);
 
-        % ---- 计算修改后的 J_T²（仅关注故障中心的组合 J_T²）----
+        % ---- 计算修改后的 J_t²（仅关注故障中心的组合 J_t²）----
         J_cut_omega = zeros(1, T_sim);
 
         if ~isempty(r_y_cut{omega_faulty}) && ~isempty(Sigma_r_omega{omega_faulty})
@@ -427,7 +427,7 @@ for f_idx = 1:n_fault_cases
             cut_J_T2_drop(c_idx));
     end
 
-    % 精定位判定：J_T² 下降最大的子系统为故障源
+    % 精定位判定：J_t² 下降最大的子系统为故障源
     [max_drop, idx_max_drop] = max(cut_J_T2_drop);
     identified_subsys = center_subsystems(idx_max_drop);
     correct_fine = (identified_subsys == fault_subsys);
@@ -507,9 +507,9 @@ fprintf('  对子系统 %d 在时刻 k=%d（健康状态）运行单步 recursiv
 % 重新生成仿真数据（使用相同的 rng 种子以获得相同噪声）
 rng(42);
 [~, sim_w_demo] = create_noise_v2(T_sim, diag(Sigma_w_full)');
-w_demo = squeeze(sim_w_demo.data);
+w_demo = squeeze(sim_w_demo.Data);
 [~, sim_v_demo] = create_noise_v2(T_sim, diag(Sigma_v_full)');
-v_demo = squeeze(sim_v_demo.data);
+v_demo = squeeze(sim_v_demo.Data);
 
 x_demo = zeros(N_x_sys, T_sim);
 u_demo = zeros(N_u_sys, T_sim);
@@ -603,13 +603,13 @@ if ~exist(out_pic, 'dir'), mkdir(out_pic); end
 n_plot = min(500, T_sim);
 t_plot = (0:n_plot-1);
 
-% ---- 8a. 各故障场景的 J_T² 时间曲线（带粗定位标记）----
+% ---- 8a. 各故障场景的 J_t² 时间曲线（带粗定位标记）----
 for f_idx = 1:n_fault_cases
     sd = sim_data_store{f_idx};
     fs = sd.fault_subsys;
     of = sd.omega_faulty;
 
-    % 图 1：两个中心的 J_T²_y 对比
+    % 图 1：两个中心的 J_t²_y 对比
     figh_jt2 = figure('Name', sprintf('实验06-故障S%d-JT2_y', fs), ...
                        'NumberTitle', 'off');
 
@@ -677,15 +677,15 @@ for f_idx = 1:n_fault_cases
     saveas(figh_bar, [out_pic sprintf('fault_S%d_fine_bar.png', fs)]);
     saveas(figh_bar, [out_pic sprintf('fault_S%d_fine_bar.fig', fs)]);
 
-    % 图 3：J_T²_combined 全序列与各切断后对比
+    % 图 3：J_t²_combined 全序列与各切断后对比
     figh_compare = figure('Name', sprintf('实验06-故障S%d-切断对比', fs), ...
                            'NumberTitle', 'off');
 
-    % 全配置 J_T²_combined
+    % 全配置 J_t²_combined
     plot(t_plot, sd.J_T2_combined{of}(1:n_plot), 'k-', 'LineWidth', 1.5);
     hold on;
 
-    % 各切断后的 J_T²_combined（使用存储的仿真数据重新计算）
+    % 各切断后的 J_t²_combined（使用存储的仿真数据重新计算）
     y_ref = sd.y_faulty;
     u_ref = sd.u_faulty;
     s_ref = sd.s_cell;
