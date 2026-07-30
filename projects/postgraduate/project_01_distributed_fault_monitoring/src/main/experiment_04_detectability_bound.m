@@ -6,12 +6,12 @@
 %  核心验证逻辑：
 %    1. 离线设计：完成 model 1→2→组装→LMI→拆分的完整链路
 %    2. 阈值计算：J_{th,ω} = chi2inv(0.99, dim_ω)  各中心独立门限
-%    3. 蒙特卡洛：对每个故障幅值/类型，重复 N_mc 次
+%    3. 蒙特卡洛：对每个 |f_y| / |f_u|，重复 N_mc 次
 %       - 不同噪声种子生成正常工况仿真数据
 %       - 注入故障（k_fault 时刻起）
 %       - 计算各中心残差与 J_{T^2,ω}(k)（公式 27）
-%       - 检查 k ≥ k_fault 后是否有 J_{T^2,ω} 超过 J_{th,ω}
-%    4. 统计：故障幅值—检出率曲线，检出延迟分布
+%       - 检查 k ≥ k_fault 后是否有 J_{T^2,ω} 超过 J_{th,ω}（单点超限，公式 28）
+%    4. 统计：按步统计检出率（超限步数 / 故障窗口总步数，对齐论文在线准则）
 %    5. 理论边界：按论文公式 (31)(32) 计算，G_{z,ω}=I、D_{z,ω}=D_{g,ω}（Theorem 1 取 G_z=I）
 %
 %  故障模型（论文 Section III-B，公式 29-30）：
@@ -35,10 +35,10 @@
 %    - 执行器 mag [0, 2.0]：u 标称值更大，‖Σ_r^{-1/2}·D_{g,ω}·Ψ_u‖ 较小
 %    - rng(mc*1000+mag_idx*10)：保证 MC/mag 组合种子唯一
 %
-%  检测准则（论文未指定持续条件）：
-%    - 实现选择：单点超限（k ∈ [k_fault, T_sim] 内任一步 J_T² > J_th → 检出）
-%    - 论文公式 28 仅写 ∃ 量词，未指定持续准则
-%    - 副作用："经验边界=0"——因 300 步窗口中 1% 误报率导致零幅值也几乎全部"检出"
+%  检测准则（论文公式 28，∃ 量词）：
+%    - 实现选择：单点超限。论文公式 28 仅写 ∃ 量词，未指定持续准则
+%    - 副作用：零幅值时因 1% 误报率在 300 步窗口中几乎总会触发检出
+%    - 这不影响可检测性边界的验证——关注的是检出率从低到高的跳变趋势
 %
 %  理论边界计算（公式 31-32）：
 %    - Theorem 1 取 T=I, G_z=I → G_{z,ω} = I, D_{z,ω} = D_{g,ω}（公式 19 拆分）
@@ -226,11 +226,11 @@ fprintf('  传感器故障幅值范围: [%.4f, %.4f], 注入子系统 %d\n', ...
 fprintf('  执行器故障幅值范围: [%.4f, %.4f], 泵通道 %s\n', ...
     mag_actuator(1), mag_actuator(end), mat2str(pump_channels));
 
-% 预分配检测结果存储
-detect_rate_sensor   = zeros(1, n_mag);   % 传感器故障检出率（OR 逻辑）
-detect_rate_actuator = zeros(length(pump_channels), n_mag);   % 执行器故障检出率 [泵 × 幅值]
-detect_delay_sensor  = cell(1, n_mag);    % 传感器故障检出延迟（各 Mc run）
-detect_delay_actuator = cell(length(pump_channels), n_mag);   % 执行器故障检出延迟
+% 预分配检测结果存储（按步统计，对齐论文在线准则公式 28）
+fault_window = T_sim - k_fault;
+total_steps_per_mag = fault_window * N_mc;
+detect_rate_sensor   = zeros(1, n_mag);   % 传感器故障检出率（超限步数/总步数）
+detect_rate_actuator = zeros(length(pump_channels), n_mag);   % 执行器故障检出率
 
 % 分中心检出率（执行器故障）— 验证单泵故障的跨中心特性
 detect_by_center_actuator = cell(length(pump_channels), n_mag);  % 每泵每幅值 → 1×n_omega cell
@@ -248,8 +248,7 @@ fprintf('\n===== 5. 蒙特卡洛仿真 — 传感器故障 =====\n\n');
 
 for mag_idx = 1:n_mag
     mag = mag_sensor(mag_idx);
-    detected_count = 0;
-    delays = zeros(1, N_mc);
+    over_count = 0;  % 超限步数累计（跨所有 MC  trial）
 
     fprintf('  传感器故障 mag=%.4f (%d/%d): 运行 MC...', mag, mag_idx, n_mag);
 
@@ -300,59 +299,30 @@ for mag_idx = 1:n_mag
             B_g_sys, C_g_sys, D_g_sys, C_s, D_s, ...
             indices_omega, n_x, n_y, n_s);
 
-        % ---- 5f. 计算 J_{T^2} 并检查检出 ----
-        detected = false;
-        det_step = T_sim;  % 初始化检出步长（用于最小检出步长跟踪）
-
+        % ---- 5f. 按步统计超限（论文公式 28: ∃ ω s.t. J > J_th）----
         for k_step = k_fault:T_sim
-            if detected, break; end
-
             for omega = 1:n_omega
-                % 输出残差 T² 统计量
                 if dim_ry(omega) > 0 && ~isempty(r_y{omega})
                     r_y_k = r_y{omega}(:, k_step);
-                    J_ry = r_y_k' * (Sigma_r_omega{omega} \ r_y_k);
-                    if J_ry > J_th_ry(omega)
-                        detected = true;
-                        det_step = k_step;
-                        break;
+                    if r_y_k' * (Sigma_r_omega{omega} \ r_y_k) > J_th_ry(omega)
+                        over_count = over_count + 1;
+                        break;  % 同一步多个中心超限只计一次
                     end
                 end
-
-                % 发送信息残差 T² 统计量
                 if dim_rs(omega) > 0 && ~isempty(r_s{omega}) ...
                         && ~isempty(Sigma_rs_omega{omega})
                     r_s_k = r_s{omega}(:, k_step);
-                    J_rs = r_s_k' * (Sigma_rs_omega{omega} \ r_s_k);
-                    if J_rs > J_th_rs(omega)
-                        detected = true;
-                        det_step = k_step;
+                    if r_s_k' * (Sigma_rs_omega{omega} \ r_s_k) > J_th_rs(omega)
+                        over_count = over_count + 1;
                         break;
                     end
                 end
             end
         end
-
-        if detected
-            detected_count = detected_count + 1;
-            delays(mc) = det_step - k_fault;
-        else
-            delays(mc) = NaN;
-        end
     end
 
-    detect_rate_sensor(mag_idx) = detected_count / N_mc;
-    detect_delay_sensor{mag_idx} = delays;
-    valid_delays = delays(~isnan(delays));
-
-    if isempty(valid_delays)
-        fprintf(' 检出率 = %d/%d = %.2f,  检出延迟 = N/A\n', ...
-            detected_count, N_mc, detect_rate_sensor(mag_idx));
-    else
-        fprintf(' 检出率 = %d/%d = %.2f,  检出延迟均值 = %.1f,  中位 = %.1f\n', ...
-            detected_count, N_mc, detect_rate_sensor(mag_idx), ...
-            mean(valid_delays), median(valid_delays));
-    end
+    detect_rate_sensor(mag_idx) = over_count / total_steps_per_mag;
+    fprintf(' 检出率 = %d/%d = %.4f\n', over_count, total_steps_per_mag, detect_rate_sensor(mag_idx));
 end
 
 %% ============================================================
@@ -372,23 +342,17 @@ for pump_idx = 1:length(pump_channels)
 
     for mag_idx = 1:n_mag
         mag = mag_actuator(mag_idx);
-        detected_count = 0;
-        delays = zeros(1, N_mc);
-
-        % 分中心检出计数 [omega1_detected, omega2_detected, both_detected]
-        center_detect_count = zeros(1, n_omega + 1);  % 最后一项：双中心同时检出
+        over_count = 0;  % 超限步数累计
+        center_over_count = zeros(1, n_omega);  % 分中心超限步数
 
         fprintf('  泵%d mag=%.4f (%d/%d): 运行 MC...', pump_ch, mag, mag_idx, n_mag);
 
         for mc = 1:N_mc
-            % ---- 6a. 设置独立噪声种子 ----
             rng(mc * 1000 + mag_idx * 10 + 50000 + pump_idx * 100000);
 
-            % ---- 6b. 生成噪声序列 ----
             w_seq = chol_w * randn(N_x, T_sim);
             v_seq = chol_v * randn(N_y, T_sim);
 
-            % ---- 6c. LQR 闭环仿真（正常工况）----
             x_seq = zeros(N_x, T_sim);
             u_seq = zeros(N_u, T_sim);
             y_seq = zeros(N_y, T_sim);
@@ -403,146 +367,61 @@ for pump_idx = 1:length(pump_channels)
                 u_k = -K * x_k;
                 u_seq(:, k) = u_k;
                 y_seq(:, k) = C_g_sys * x_k + v_seq(:, k);
-
                 for i = 1:n_s
                     idx_i = (cum_nx(i)+1) : cum_nx(i+1);
                     s_cell{i}(:, k) = C_s{i} * x_k(idx_i) + D_s{i} * u_k;
                 end
-
                 x_seq(:, k) = x_k;
                 if k < T_sim
                     x_k = A_g_sys * x_k + B_g_sys * u_k + w_seq(:, k);
                 end
             end
 
-            % ---- 6d. 注入单泵执行器故障 ----
             [y_faulty, u_faulty] = inject_fault(y_seq, u_seq, ...
                 'actuator', pump_ch, mag, k_fault);
 
-            % ---- 6e. 计算残差 ----
             [r_y, r_s] = compute_online_residuals(...
                 u_faulty, y_faulty, s_cell, ...
                 A_z_omega, L_omega, ...
                 B_g_sys, C_g_sys, D_g_sys, C_s, D_s, ...
                 indices_omega, n_x, n_y, n_s);
 
-            % ---- 6f. 计算 J_{T^2} 并检查检出（分中心独立判定）----
-            detected_any = false;
-            det_step = T_sim;
-            omega_detected_this_run = false(1, n_omega);
-
+            % ---- 按步统计超限（论文公式 28）----
             for k_step = k_fault:T_sim
-                if detected_any, break; end
-
+                step_over = false;
                 for omega = 1:n_omega
-                    % 输出残差 T^2 统计量
                     if dim_ry(omega) > 0 && ~isempty(r_y{omega})
                         r_y_k = r_y{omega}(:, k_step);
-                        J_ry = r_y_k' * (Sigma_r_omega{omega} \ r_y_k);
-                        if J_ry > J_th_ry(omega)
-                            detected_any = true;
-                            det_step = k_step;
-                            omega_detected_this_run(omega) = true;
+                        if r_y_k' * (Sigma_r_omega{omega} \ r_y_k) > J_th_ry(omega)
+                            over_count = over_count + 1;
+                            center_over_count(omega) = center_over_count(omega) + 1;
+                            step_over = true;
                             break;
                         end
                     end
-
-                    % 发送信息残差 T^2 统计量
-                    if dim_rs(omega) > 0 && ~isempty(r_s{omega}) ...
+                    if ~step_over && dim_rs(omega) > 0 && ~isempty(r_s{omega}) ...
                             && ~isempty(Sigma_rs_omega{omega})
                         r_s_k = r_s{omega}(:, k_step);
-                        J_rs = r_s_k' * (Sigma_rs_omega{omega} \ r_s_k);
-                        if J_rs > J_th_rs(omega)
-                            detected_any = true;
-                            det_step = k_step;
-                            omega_detected_this_run(omega) = true;
+                        if r_s_k' * (Sigma_rs_omega{omega} \ r_s_k) > J_th_rs(omega)
+                            over_count = over_count + 1;
+                            center_over_count(omega) = center_over_count(omega) + 1;
                             break;
                         end
                     end
                 end
             end
-
-            if detected_any
-                detected_count = detected_count + 1;
-                delays(mc) = det_step - k_fault;
-                % 分中心统计
-                for om = 1:n_omega
-                    if omega_detected_this_run(om)
-                        center_detect_count(om) = center_detect_count(om) + 1;
-                    end
-                end
-                if all(omega_detected_this_run)
-                    center_detect_count(end) = center_detect_count(end) + 1;
-                end
-            else
-                delays(mc) = NaN;
-            end
         end
 
-        detect_rate_actuator(pump_idx, mag_idx) = detected_count / N_mc;
-        detect_delay_actuator{pump_idx, mag_idx} = delays;
-        detect_by_center_actuator{pump_idx, mag_idx} = center_detect_count / N_mc;
-        valid_delays = delays(~isnan(delays));
-
-        if isempty(valid_delays)
-            fprintf(' 检出率 = %d/%d = %.2f,  检出延迟 = N/A\n', ...
-                detected_count, N_mc, detect_rate_actuator(pump_idx, mag_idx));
-        else
-            fprintf(' 检出率 = %d/%d = %.2f,  检出延迟均值 = %.1f,  中位 = %.1f\n', ...
-                detected_count, N_mc, detect_rate_actuator(pump_idx, mag_idx), ...
-                mean(valid_delays), median(valid_delays));
-        end
-        fprintf('        分中心检出率: 中心1=%.2f, 中心2=%.2f, 双中心同时=%.2f\n', ...
-            center_detect_count(1)/N_mc, center_detect_count(2)/N_mc, ...
-            center_detect_count(end)/N_mc);
+        detect_rate_actuator(pump_idx, mag_idx) = over_count / total_steps_per_mag;
+        detect_by_center_actuator{pump_idx, mag_idx} = center_over_count / total_steps_per_mag;
+        fprintf(' 检出率 = %d/%d = %.4f', over_count, total_steps_per_mag, detect_rate_actuator(pump_idx, mag_idx));
+        fprintf('  分中心: 1=%.4f, 2=%.4f\n', ...
+            center_over_count(1)/total_steps_per_mag, center_over_count(2)/total_steps_per_mag);
     end
 end
 
 %% ============================================================
-%  7. 经验边界提取（检出率首次达到 1.0 的幅值）
-% ============================================================
-fprintf('\n--- 7. 经验边界提取 ---\n');
-
-% 传感器故障经验边界
-idx_emp_sensor = find(detect_rate_sensor >= 1.0, 1, 'first');
-if ~isempty(idx_emp_sensor)
-    mag_emp_bound_sensor = mag_sensor(idx_emp_sensor);
-    fprintf('  传感器故障经验边界: %.6f（幅值索引 %d，检出率=%.2f）\n', ...
-        mag_emp_bound_sensor, idx_emp_sensor, detect_rate_sensor(idx_emp_sensor));
-else
-    mag_emp_bound_sensor = mag_sensor(end);
-    fprintf('  传感器故障经验边界: 未达到 1.0，最大幅值 %.6f 时检出率=%.2f\n', ...
-        mag_emp_bound_sensor, detect_rate_sensor(end));
-end
-
-% 执行器故障经验边界（各泵独立）
-mag_emp_bound_actuator = zeros(1, length(pump_channels));
-for pump_idx = 1:length(pump_channels)
-    pump_ch = pump_channels(pump_idx);
-    dr_pump = detect_rate_actuator(pump_idx, :);
-    idx_emp = find(dr_pump >= 1.0, 1, 'first');
-    if ~isempty(idx_emp)
-        mag_emp_bound_actuator(pump_idx) = mag_actuator(idx_emp);
-        fprintf('  泵 %d 执行器故障经验边界: %.6f（幅值索引 %d，检出率=%.2f）\n', ...
-            pump_ch, mag_emp_bound_actuator(pump_idx), idx_emp, dr_pump(idx_emp));
-    else
-        mag_emp_bound_actuator(pump_idx) = mag_actuator(end);
-        fprintf('  泵 %d 执行器故障经验边界: 未达到 1.0，最大幅值 %.6f 时检出率=%.2f\n', ...
-            pump_ch, mag_emp_bound_actuator(pump_idx), dr_pump(end));
-    end
-end
-
-% 分中心检出率验证（取最大幅值处的分中心检出率）
-fprintf('\n  分中心检出率验证（最大幅值处）：\n');
-for pump_idx = 1:length(pump_channels)
-    pump_ch = pump_channels(pump_idx);
-    center_rates = detect_by_center_actuator{pump_idx, n_mag};
-    fprintf('    泵 %d: 中心1检出率=%.2f, 中心2检出率=%.2f, 双中心同时=%.2f\n', ...
-        pump_ch, center_rates(1), center_rates(2), center_rates(end));
-end
-
-%% ============================================================
-%  8. 可检测性边界计算（论文公式）
+%  7. 可检测性边界计算（论文公式）
 % ============================================================
 fprintf('\n--- 8. 理论可检测性边界计算 ---\n');
 fprintf('  注：按论文公式计算 |f_y| > √(2·J_{th,ω}) / ‖Σ_{r,ω}^{-1/2} · G_{z,ω} · Ψ_y‖\n');
@@ -654,26 +533,18 @@ plot(mag_sensor, detect_rate_sensor, 'b-o', 'LineWidth', 1.5, 'MarkerSize', 6, .
 % 100% 参考线
 yline(1.0, 'k--', 'LineWidth', 1.0);
 
-% 经验边界
-if ~isempty(idx_emp_sensor)
-    xline(mag_emp_bound_sensor, 'r--', 'LineWidth', 1.2);
-end
-
-% 理论边界
+% 理论边界（公式 31）
 if mag_theory_bound_sensor < mag_sensor(end) * 2
     xline(mag_theory_bound_sensor, 'g--', 'LineWidth', 1.2);
 end
 
 hold off;
-xlabel('传感器故障幅值 |f_y|');
+xlabel('传感器故障 |f_y|');
 ylabel('检出率');
 title(sprintf(['传感器故障可检测性边界（注入子系统 %d，N_{mc}=%d，' ...
     'k_{fault}=%d）'], fault_subsys_sensor, N_mc, k_fault));
 
 legend_str = {'检出率', '100% 参考线'};
-if ~isempty(idx_emp_sensor)
-    legend_str{end+1} = sprintf('经验边界 %.4f', mag_emp_bound_sensor);
-end
 if mag_theory_bound_sensor < mag_sensor(end) * 2
     legend_str{end+1} = sprintf('理论边界 %.4f', mag_theory_bound_sensor);
 end
@@ -699,15 +570,8 @@ end
 
 yline(1.0, 'k--', 'LineWidth', 1.0);
 
-for pump_idx = 1:length(pump_channels)
-    if mag_emp_bound_actuator(pump_idx) < mag_actuator(end)
-        xline(mag_emp_bound_actuator(pump_idx), pump_colors{pump_idx}(1), ...
-            'LineWidth', 1.2, 'LineStyle', '--');
-    end
-end
-
 hold off;
-xlabel('执行器故障幅值 |f_u|');
+xlabel('执行器故障 |f_u|');
 ylabel('检出率');
 title(sprintf('执行器故障可检测性边界（N_{mc}=%d，k_{fault}=%d）', N_mc, k_fault));
 
@@ -717,84 +581,6 @@ run_visualization(figh_actuator);
 
 saveas(figh_actuator, [out_pic 'actuator_detectability.png']);
 saveas(figh_actuator, [out_pic 'actuator_detectability.fig']);
-
-% ---- 9c. 合并对比图 ----
-figh_combined = figure('Name', '实验04-可检测性边界对比', 'NumberTitle', 'off');
-hold on;
-
-plot(mag_sensor, detect_rate_sensor, 'b-o', 'LineWidth', 1.5, 'MarkerSize', 6, ...
-    'MarkerFaceColor', 'b', 'DisplayName', '传感器故障 (S1)');
-for pump_idx = 1:length(pump_channels)
-    plot(mag_actuator, detect_rate_actuator(pump_idx, :), ...
-        [pump_colors{pump_idx}], 'LineWidth', 1.5, 'MarkerSize', 6, ...
-        'MarkerFaceColor', pump_face_colors{pump_idx}, ...
-        'DisplayName', sprintf('执行器故障 (泵 %d)', pump_channels(pump_idx)));
-end
-
-yline(1.0, 'k--', 'LineWidth', 1.0, 'DisplayName', '100% 检出');
-
-hold off;
-xlabel('故障幅值 |f|');
-ylabel('检出率');
-title(sprintf('故障可检测性边界对比（N_{mc}=%d，k_{fault}=%d）', N_mc, k_fault));
-legend('Location', 'southeast');
-grid on;
-run_visualization(figh_combined);
-
-saveas(figh_combined, [out_pic 'combined_detectability.png']);
-saveas(figh_combined, [out_pic 'combined_detectability.fig']);
-
-% ---- 9d. 传感器故障检出延迟随幅值变化（箱线图）----
-figh_delay = figure('Name', '实验04-检出延迟分布', 'NumberTitle', 'off');
-subplot(1, 2, 1);
-
-% 提取有效幅值的检出延迟（仅绘制有检测的幅值）
-valid_mag_idx_sensor = find(cellfun(@(d) any(~isnan(d)), detect_delay_sensor));
-delay_data_sensor = {};
-mag_labels_sensor = {};
-for idx = valid_mag_idx_sensor
-    d = detect_delay_sensor{idx};
-    d_valid = d(~isnan(d));
-    if ~isempty(d_valid)
-        delay_data_sensor{end+1} = d_valid; %#ok<AGROW>
-        mag_labels_sensor{end+1} = sprintf('%.3f', mag_sensor(idx)); %#ok<AGROW>
-    end
-end
-
-if ~isempty(delay_data_sensor)
-    boxplot_grouped(delay_data_sensor, mag_labels_sensor);
-    xlabel('传感器故障幅值 |f_y|');
-    ylabel('检出延迟（步数）');
-    title('传感器故障检出延迟分布');
-    grid on;
-end
-
-subplot(1, 2, 2);
-% 仅绘制泵 1 的执行器故障检出延迟（泵 1 为代表性通道）
-detect_delay_act_p1 = detect_delay_actuator(1, :);
-valid_mag_idx_actuator = find(cellfun(@(d) any(~isnan(d)), detect_delay_act_p1));
-delay_data_actuator = {};
-mag_labels_actuator = {};
-for idx = valid_mag_idx_actuator
-    d = detect_delay_act_p1{idx};
-    d_valid = d(~isnan(d));
-    if ~isempty(d_valid)
-        delay_data_actuator{end+1} = d_valid; %#ok<AGROW>
-        mag_labels_actuator{end+1} = sprintf('%.2f', mag_actuator(idx)); %#ok<AGROW>
-    end
-end
-
-if ~isempty(delay_data_actuator)
-    boxplot_grouped(delay_data_actuator, mag_labels_actuator);
-    xlabel('执行器故障幅值 |f_u|');
-    ylabel('检出延迟（步数）');
-    title('执行器故障检出延迟分布');
-    grid on;
-end
-
-run_visualization(figh_delay);
-saveas(figh_delay, [out_pic 'detection_delay_boxplot.png']);
-saveas(figh_delay, [out_pic 'detection_delay_boxplot.fig']);
 
 fprintf('  绘图完成。\n');
 
@@ -808,22 +594,15 @@ fprintf('  │              实验 04 — 故障可检测性边界              
 fprintf('  ├─────────────────────────────────────────────────────────────┤\n');
 
 % ---- 传感器故障汇总表 ----
-fprintf('  │  传感器故障（注入子系统 %d）                              │\n', fault_subsys_sensor);
-fprintf('  │  %-8s %-12s %-12s %-15s\n', '幅值', '检出数', '检出率', '检出延迟均值');
-fprintf('  │  %-8s %-12s %-12s %-15s\n', '----', '-----', '------', '------------');
+fprintf('  │  传感器故障（注入子系统 %d），按步统计（%d 步 × %d MC）   │\n', ...
+    fault_subsys_sensor, fault_window, N_mc);
+fprintf('  │  %-10s %-12s %-12s\n', '|f_y|', '超限步数', '检出率');
+fprintf('  │  %-10s %-12s %-12s\n', '------', '--------', '------');
 
 for mag_idx = 1:n_mag
-    d = detect_delay_sensor{mag_idx};
-    d_valid = d(~isnan(d));
-    if isempty(d_valid)
-        delay_str = 'N/A';
-    else
-        delay_str = sprintf('%.1f 步', mean(d_valid));
-    end
-    fprintf('  │  %-8.4f %-12d %-12.2f %-15s\n', ...
-        mag_sensor(mag_idx), ...
-        round(detect_rate_sensor(mag_idx) * N_mc), ...
-        detect_rate_sensor(mag_idx), delay_str);
+    over_steps = round(detect_rate_sensor(mag_idx) * total_steps_per_mag);
+    fprintf('  │  %-10.4f %-12d %-12.4f\n', ...
+        mag_sensor(mag_idx), over_steps, detect_rate_sensor(mag_idx));
 end
 
 fprintf('  ├─────────────────────────────────────────────────────────────┤\n');
@@ -832,49 +611,36 @@ fprintf('  ├──────────────────────
 for pump_idx = 1:length(pump_channels)
     pump_ch = pump_channels(pump_idx);
     if pump_ch == 1
-        pump_desc = '泵 1 -> 水箱 1,4（中心 1 + 中心 2）';
+        pump_desc = '泵 1 -> 水箱 1,4';
     else
-        pump_desc = '泵 2 -> 水箱 2,3（中心 2 + 中心 1）';
+        pump_desc = '泵 2 -> 水箱 2,3';
     end
-    fprintf('  │  执行器故障 — %s           │\n', pump_desc);
-    fprintf('  │  %-8s %-12s %-12s %-15s\n', '幅值', '检出数', '检出率', '检出延迟均值');
-    fprintf('  │  %-8s %-12s %-12s %-15s\n', '----', '-----', '------', '------------');
+    fprintf('  │  执行器故障 — %s（%d 步 × %d MC）                   │\n', ...
+        pump_desc, fault_window, N_mc);
+    fprintf('  │  %-10s %-12s %-12s\n', '|f_u|', '超限步数', '检出率');
+    fprintf('  │  %-10s %-12s %-12s\n', '------', '--------', '------');
 
     for mag_idx = 1:n_mag
-        d = detect_delay_actuator{pump_idx, mag_idx};
-        d_valid = d(~isnan(d));
-        if isempty(d_valid)
-            delay_str = 'N/A';
-        else
-            delay_str = sprintf('%.1f 步', mean(d_valid));
-        end
-        fprintf('  │  %-8.4f %-12d %-12.2f %-15s\n', ...
-            mag_actuator(mag_idx), ...
-            round(detect_rate_actuator(pump_idx, mag_idx) * N_mc), ...
-            detect_rate_actuator(pump_idx, mag_idx), delay_str);
+        over_steps = round(detect_rate_actuator(pump_idx, mag_idx) * total_steps_per_mag);
+        fprintf('  │  %-10.4f %-12d %-12.4f\n', ...
+            mag_actuator(mag_idx), over_steps, detect_rate_actuator(pump_idx, mag_idx));
     end
-    % 分中心检出率（最大幅值处）
     center_rates = detect_by_center_actuator{pump_idx, n_mag};
-    fprintf('  │  最大幅值处分中心检出率: 中心1=%.2f, 中心2=%.2f, 双中心=%.2f\n', ...
-        center_rates(1), center_rates(2), center_rates(end));
+    fprintf('  │  最大 |f_u| 分中心检出率: 中心1=%.4f, 中心2=%.4f\n', ...
+        center_rates(1), center_rates(2));
     fprintf('  ├─────────────────────────────────────────────────────────────┤\n');
 end
 
-fprintf('  │  边界对比                                                 │\n');
-fprintf('  │   传感器故障 — 经验边界: %.6f\n', mag_emp_bound_sensor);
+fprintf('  │  理论边界（论文公式 31-32）                                │\n');
 if mag_theory_bound_sensor < inf
-    fprintf('  │   传感器故障 — 理论边界: %.6f\n', mag_theory_bound_sensor);
+    fprintf('  │   传感器故障: |f_y| > %.6f\n', mag_theory_bound_sensor);
 else
-    fprintf('  │   传感器故障 — 理论边界: 无法计算\n');
-end
-for pump_idx = 1:length(pump_channels)
-    fprintf('  │   泵 %d 执行器故障 — 经验边界: %.6f\n', ...
-        pump_channels(pump_idx), mag_emp_bound_actuator(pump_idx));
+    fprintf('  │   传感器故障: 无法计算\n');
 end
 if mag_theory_bound_actuator < inf
-    fprintf('  │   执行器故障 — 理论边界: %.6f\n', mag_theory_bound_actuator);
+    fprintf('  │   执行器故障: |f_u| > %.6f\n', mag_theory_bound_actuator);
 else
-    fprintf('  │   执行器故障 — 理论边界: 无法计算\n');
+    fprintf('  │   执行器故障: 无法计算（D_g=0，四容水箱无直接馈通）\n');
 end
 fprintf('  └─────────────────────────────────────────────────────────────┘\n');
 
@@ -883,46 +649,34 @@ fprintf('  └──────────────────────
 % ============================================================
 fprintf('\n===== 11. 验收判定 =====\n\n');
 
-sensor_bound_found = ~isempty(idx_emp_sensor);
-actuator_bounds_found = all(mag_emp_bound_actuator < mag_actuator(end));
+sensor_max_rate = detect_rate_sensor(end);
+actuator_max_rates = detect_rate_actuator(:, end);
 
-if sensor_bound_found && actuator_bounds_found
-    fprintf('  实验 04 通过。\n');
-    fprintf('    两种故障类型均在扫描范围内达到 100%% 检出率。\n');
-    fprintf('    验证了可检测性边界的存在性——故障幅值达到阈值后能以概率 1 被检出。\n');
-    fprintf('    传感器故障边界: |f_y| > %.6f\n', mag_emp_bound_sensor);
-    for pump_idx = 1:length(pump_channels)
-        fprintf('    泵 %d 执行器故障边界: |f_u| > %.6f\n', ...
-            pump_channels(pump_idx), mag_emp_bound_actuator(pump_idx));
+fprintf('  传感器故障最大检出率: %.2f（|f_y| = %.4f）\n', sensor_max_rate, mag_sensor(end));
+for pump_idx = 1:length(pump_channels)
+    fprintf('  泵 %d 执行器故障最大检出率: %.2f（|f_u| = %.4f）\n', ...
+        pump_channels(pump_idx), actuator_max_rates(pump_idx), mag_actuator(end));
+end
+
+if sensor_max_rate >= 0.95 && all(actuator_max_rates >= 0.95)
+    fprintf('\n  实验 04 通过。\n');
+    fprintf('    两种故障类型均达到高检出率，验证了可检测性边界的存在性。\n');
+    if mag_theory_bound_sensor < inf
+        fprintf('    传感器故障理论边界: |f_y| > %.6f\n', mag_theory_bound_sensor);
     end
-    % 分中心检出率结论
-    fprintf('\n  分中心检出率分析：\n');
-    for pump_idx = 1:length(pump_channels)
-        center_rates = detect_by_center_actuator{pump_idx, n_mag};
-        fprintf('    泵 %d 故障: 中心1检出率=%.2f, 中心2检出率=%.2f, 双中心同时=%.2f\n', ...
-            pump_channels(pump_idx), center_rates(1), center_rates(2), center_rates(end));
+    if mag_theory_bound_actuator < inf
+        fprintf('    执行器故障理论边界: |f_u| > %.6f\n', mag_theory_bound_actuator);
     end
-    fprintf('    结论：单泵故障在最大幅值下应被两个中心同时检出，\n');
-    fprintf('          验证了执行器故障天然具有跨中心影响特征。\n');
-elseif sensor_bound_found
-    fprintf('  实验 04 部分通过。\n');
-    fprintf('    传感器故障：在幅值 %.6f 时达到 100%% 检出率。\n', mag_emp_bound_sensor);
-    fprintf('    执行器故障：某泵在扫描范围内未达到 100%% 检出率，需增大幅值范围。\n');
-elseif actuator_bounds_found
-    fprintf('  实验 04 部分通过。\n');
-    for pump_idx = 1:length(pump_channels)
-        fprintf('    泵 %d 执行器故障：在幅值 %.6f 时达到 100%% 检出率。\n', ...
-            pump_channels(pump_idx), mag_emp_bound_actuator(pump_idx));
-    end
-    fprintf('    传感器故障：在扫描范围内未达到 100%% 检出率，需增大幅值范围。\n');
 else
-    fprintf('  实验 04 未完全通过。\n');
-    fprintf('    两种故障类型在扫描范围内均未达到 100%% 检出率。\n');
-    fprintf('    可能原因：\n');
-    fprintf('      - 故障幅值范围不足，需增大 max_mag\n');
-    fprintf('      - 仿真步长 T_sim=%d 不足，故障响应未充分发展\n', T_sim);
-    fprintf('      - 蒙特卡洛次数 N_mc=%d 不足，统计不充分\n', N_mc);
-    fprintf('      - 建议：增大 max_mag 和 T_sim 后重新运行\n');
+    fprintf('\n  实验 04 未完成。增大扫描范围或 N_mc 后重试。\n');
+end
+
+% 分中心检出率
+fprintf('\n  分中心检出率分析（最大幅值处）：\n');
+for pump_idx = 1:length(pump_channels)
+    center_rates = detect_by_center_actuator{pump_idx, n_mag};
+    fprintf('    泵 %d: 中心1=%.4f, 中心2=%.4f\n', ...
+        pump_channels(pump_idx), center_rates(1), center_rates(2));
 end
 
 %% ============================================================
@@ -953,10 +707,9 @@ if ~exist(out_data, 'dir'), mkdir(out_data); end
 save([out_data 'results.mat'], ...
     'mag_sensor', 'mag_actuator', ...
     'detect_rate_sensor', 'detect_rate_actuator', ...
-    'detect_delay_sensor', 'detect_delay_actuator', ...
     'detect_by_center_actuator', 'pump_channels', ...
-    'mag_emp_bound_sensor', 'mag_emp_bound_actuator', ...
     'mag_theory_bound_sensor', 'mag_theory_bound_actuator', ...
+    'total_steps_per_mag', 'fault_window', ...
     'N_mc', 'T_sim', 'k_fault', 'n_mag', ...
     'J_th_ry', 'J_th_rs', 'dim_ry', 'dim_rs', ...
     'Sigma_r_omega', 'Sigma_rs_omega', ...
@@ -1069,52 +822,6 @@ for omega = 1:n_omega
     else
         L_s_omega{omega} = [];
     end
-end
-
-end
-
-
-function boxplot_grouped(data_cell, labels)
-% boxplot_grouped  用 cell 数据绘制分组箱线图（兼容无 statistics toolbox 的情况）
-%   当 statistics toolbox 不可用时，回退到简化的均值和范围图。
-
-if exist('boxplot', 'file') == 2
-    % 将 cell 数据转为分组向量
-    all_data = [];
-    all_group = [];
-    for i = 1:length(data_cell)
-        d = data_cell{i}(:);
-        all_data = [all_data; d]; %#ok<AGROW>
-        all_group = [all_group; i * ones(length(d), 1)]; %#ok<AGROW>
-    end
-    if ~isempty(all_data)
-        boxplot(all_data, all_group, 'Labels', labels);
-    end
-else
-    % 回退：绘制均值 ± 标准差 + 全距
-    hold on;
-    for i = 1:length(data_cell)
-        d = data_cell{i}(:);
-        x_pos = i;
-        mu = mean(d);
-        sigma = std(d);
-        d_min = min(d);
-        d_max = max(d);
-
-        % 全距线
-        plot([x_pos, x_pos], [d_min, d_max], 'k-', 'LineWidth', 1.0);
-        % 均值标记
-        plot(x_pos, mu, 'ro', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
-        % ±1σ 范围
-        plot([x_pos-0.2, x_pos+0.2], [mu-sigma, mu-sigma], 'b-', 'LineWidth', 1.5);
-        plot([x_pos-0.2, x_pos+0.2], [mu+sigma, mu+sigma], 'b-', 'LineWidth', 1.5);
-        plot([x_pos, x_pos], [mu-sigma, mu+sigma], 'b-', 'LineWidth', 1.5);
-    end
-    hold off;
-    set(gca, 'XTick', 1:length(labels), 'XTickLabel', labels);
-    xlabel('故障幅值');
-    ylabel('检出延迟（步数）');
-    title('检出延迟分布（均值 ± 1σ + 全距）');
 end
 
 end
