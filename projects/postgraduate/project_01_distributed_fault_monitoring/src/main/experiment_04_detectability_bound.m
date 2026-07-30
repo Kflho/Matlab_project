@@ -526,29 +526,22 @@ if ~exist(out_pic, 'dir'), mkdir(out_pic); end
 figh_sensor = figure('Name', '实验04-传感器故障可检测性边界', 'NumberTitle', 'off');
 hold on;
 
-% 检出率曲线
 plot(mag_sensor, detect_rate_sensor, 'b-o', 'LineWidth', 1.5, 'MarkerSize', 6, ...
-    'MarkerFaceColor', 'b');
+    'MarkerFaceColor', 'b', 'DisplayName', '检出率');
 
-% 100% 参考线
-yline(1.0, 'k--', 'LineWidth', 1.0);
+yline(1.0, 'k--', 'LineWidth', 1.0, 'DisplayName', '100%');
 
-% 理论边界（公式 31）
 if mag_theory_bound_sensor < mag_sensor(end) * 2
-    xline(mag_theory_bound_sensor, 'g--', 'LineWidth', 1.2);
+    xline(mag_theory_bound_sensor, 'g--', 'LineWidth', 1.2, ...
+        'DisplayName', sprintf('|f_y| > %.4f', mag_theory_bound_sensor));
 end
 
 hold off;
 xlabel('传感器故障 |f_y|');
 ylabel('检出率');
-title(sprintf(['传感器故障可检测性边界（注入子系统 %d，N_{mc}=%d，' ...
-    'k_{fault}=%d）'], fault_subsys_sensor, N_mc, k_fault));
-
-legend_str = {'检出率', '100% 参考线'};
-if mag_theory_bound_sensor < mag_sensor(end) * 2
-    legend_str{end+1} = sprintf('理论边界 %.4f', mag_theory_bound_sensor);
-end
-legend(legend_str, 'Location', 'southeast');
+title(sprintf('传感器故障（子系统 %d, N_{mc}=%d, k_{fault}=%d）', ...
+    fault_subsys_sensor, N_mc, k_fault));
+legend('Location', 'southeast');
 grid on;
 run_visualization(figh_sensor);
 
@@ -568,12 +561,12 @@ for pump_idx = 1:length(pump_channels)
         'DisplayName', sprintf('泵 %d', pump_ch));
 end
 
-yline(1.0, 'k--', 'LineWidth', 1.0);
+yline(1.0, 'k--', 'LineWidth', 1.0, 'DisplayName', '100%');
 
 hold off;
 xlabel('执行器故障 |f_u|');
 ylabel('检出率');
-title(sprintf('执行器故障可检测性边界（N_{mc}=%d，k_{fault}=%d）', N_mc, k_fault));
+title(sprintf('执行器故障（N_{mc}=%d, k_{fault}=%d）', N_mc, k_fault));
 
 legend('Location', 'southeast');
 grid on;
