@@ -4,8 +4,8 @@
 
 hLegend = findobj(gcf, 'Type', 'Legend');
 if ~isempty(hLegend)
-    set(hLegend, 'FontName',  '宋体');      % 原来是 Arial
-    set(hLegend, 'FontSize',   8);
+    set(hLegend, 'FontName',  '宋体');
+    set(hLegend, 'FontSize',   10);
     set(hLegend, 'Box',        'off');
-    set(hLegend, 'Location',   'best');
+    % Location 由各实验脚本自行设置，此处不覆盖
 end
