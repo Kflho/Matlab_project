@@ -21,3 +21,6 @@
 /Undergraduate_project/
 slprj/
 .Old/
+
+# 排除 projects 目录（只跟踪 utils）
+/projects/

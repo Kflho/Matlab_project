@@ -15,8 +15,8 @@ set(gca, 'YTickLabelRotation', 0);
 
 % ---- 字体 ----
 % set(gca, 'FontName',     'Arial');     % 无中文用 Arial
-set(gca, 'FontName',   '宋体');  % 有中文用微软雅黑
-set(gca, 'FontSize',     9);           % IEEE 推荐 8-10pt
+set(gca, 'FontName',   '宋体');
+set(gca, 'FontSize',     10);
 set(gca, 'FontWeight',   'normal');
 
 % ---- 网格（论文中根据需要开启）----

@@ -29,9 +29,13 @@ function run_visualization(figh)
         title_setting;
     end
 
-    % 统一线条宽度
-    hLines = findobj(figh, 'Type', 'Line', '-or', 'Type', 'ConstantLine');
-    if ~isempty(hLines)
-        set(hLines, 'LineWidth', 1.5);
+    % 数据线条 1.5pt，参考线（yline/xline）保持较细
+    hDataLines = findobj(figh, 'Type', 'Line');
+    if ~isempty(hDataLines)
+        set(hDataLines, 'LineWidth', 1.5);
+    end
+    hRefLines = findobj(figh, 'Type', 'ConstantLine');
+    if ~isempty(hRefLines)
+        set(hRefLines, 'LineWidth', 1.0);
     end
 end

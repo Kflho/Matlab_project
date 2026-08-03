@@ -9,5 +9,5 @@ set(gca, 'FontName',   '宋体');  % 有中文用微软雅黑
 hXLabel = get(gca, 'XLabel');
 hYLabel = get(gca, 'YLabel');
 
-set(hXLabel, 'FontName', '宋体', 'FontSize', 10, 'FontWeight', 'normal');
-set(hYLabel, 'FontName', '宋体', 'FontSize', 10, 'FontWeight', 'normal');
+set(hXLabel, 'FontName', '宋体', 'FontSize', 12, 'FontWeight', 'normal');
+set(hYLabel, 'FontName', '宋体', 'FontSize', 12, 'FontWeight', 'normal');
