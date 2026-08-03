@@ -27,6 +27,8 @@ function run_visualization(figh)
         axes_setting_2d;
         label_setting_2d;
         title_setting;
+        % 标题严格单行：超宽标题仅告警不换行，措辞精简由 AI 判断完成
+        warn_overlong_title(hAxAll(i));
     end
 
     % 图例（图窗级，一次处理全部）
@@ -44,4 +46,33 @@ function run_visualization(figh)
     if ~isempty(hRefLines)
         set(hRefLines, 'LineWidth', 1.0);
     end
+end
+
+% ---------------------------------------------------------------------
+% 局部函数：标题超宽检测（严格一行，不换行）
+% 多行标题会纵向溢出图外，因此禁止自动换行。
+% 运行日志中出现本函数打印的 [run_visualization] 标题超宽 告警时，
+% AI 必须精简对应标题措辞并重跑对应实验，直至无告警。
+% ---------------------------------------------------------------------
+function warn_overlong_title(hAx)
+    MAXW = 48;   % 单栏图一行标题有效宽度上限（CJK 全宽字计 2，ASCII 计 1）
+    hTitle = get(hAx, 'Title');
+    str = get(hTitle, 'String');
+    if isempty(str)
+        return;
+    end
+    if iscell(str)
+        str = strjoin(str, ' ');   % 已是多行则合并评估（多行本身即违规）
+    end
+    str = char(str);
+    if eff_width(str) > MAXW
+        fprintf('[run_visualization] 标题超宽(%d>%d)，严格一行放不下，需精简措辞: "%s"\n', ...
+            eff_width(str), MAXW, str);
+    end
+end
+
+function w = eff_width(str)
+% 有效宽度：非 ASCII（CJK 等全宽字符）计 2，ASCII 计 1
+    n = numel(str);
+    w = sum(double(str) > 127) * 2 + sum(double(str) <= 127);
 end
