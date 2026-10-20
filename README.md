@@ -7,7 +7,7 @@ MATLAB 控制系统实验代码：共享函数库 `matlab-project-utils/` + 练�
 在 MATLAB 里把共享库加进路径，然后直接调函数：
 
 ```matlab
-addpath(genpath('matlab-project-utils/src'));
+addpath(genpath('matlab-project-utils'));
 [A,B,C,D] = create_controlled_system();
 K = calculate_lqr(A,B);
 ```
@@ -15,13 +15,13 @@ K = calculate_lqr(A,B);
 只用一个模块时按需加，不必整库加载：
 
 ```matlab
-addpath('matlab-project-utils/src/plots');
+addpath('matlab-project-utils/plots');
 ```
 
 ## 安装与依赖
 
 - MATLAB + **Control System Toolbox**（`dlqr`、`ss`）；
-- Simulink：只有 `matlab-project-utils/src/simulink/controlled_system.slx` 需要；
+- Simulink：只有 `matlab-project-utils/simulink/controlled_system.slx` 需要；
 - 没有 `requirements.txt` 这类清单，`.m` 文件直接跑。
 
 ## 目录结构
@@ -31,14 +31,13 @@ Matlab_project/
   README.md
   projects/
     ml_2_1/                        # 简单练习：一个文件夹平铺，12 个 .m
-  matlab-project-utils/            # 共享库（正式项目，代码进 src/）
+  matlab-project-utils/            # 共享库（库根就是代码根）
     README.md                      # 模块清单与调用示例
-    src/
-      calculations/
-      initialization/
-      plots/
-      simulink/
-      visualizations/
+    calculations/
+    initialization/
+    plots/
+    simulink/
+    visualizations/
 ```
 
 ## 用法
@@ -55,7 +54,7 @@ Matlab_project/
 ## 验证
 
 ```matlab
-addpath(genpath('matlab-project-utils/src'));
+addpath(genpath('matlab-project-utils'));
 which calculate_energy                       % 应指向 ...\src\calculations\calculate_energy.m
 [A,B,C,D] = create_controlled_system();      % 依赖齐全时无报错
 K = calculate_lqr(A,B);
