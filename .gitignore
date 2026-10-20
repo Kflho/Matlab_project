@@ -7,11 +7,20 @@
 !*.mdl
 !*.md
 !.gitignore
+!LICENSE
+!local.example.json
 
 # 历史/生成目录
-/Undergraduate_project/
 slprj/
-.Old/
+.old/
+
+# 临时/输出/开发笔记：里面的 .m 也不进库
+/temp/
+/tmp/
+/dev/
+/output/
+/outputs/
+/logs/
 
 # Matlab 自动保存与编译中间物
 *.asv

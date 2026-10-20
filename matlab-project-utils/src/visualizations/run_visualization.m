@@ -27,7 +27,7 @@ function run_visualization(figh)
         axes_setting_2d;
         label_setting_2d;
         title_setting;
-        % 标题严格单行：超宽标题仅告警不换行，措辞精简由 AI 判断完成
+        % 标题严格单行：超宽只告警、不自动换行，需要人工精简措辞
         warn_overlong_title(hAxAll(i));
     end
 
@@ -52,7 +52,7 @@ end
 % 局部函数：标题超宽检测（严格一行，不换行）
 % 多行标题会纵向溢出图外，因此禁止自动换行。
 % 运行日志中出现本函数打印的 [run_visualization] 标题超宽 告警时，
-% AI 必须精简对应标题措辞并重跑对应实验，直至无告警。
+% 应先精简对应标题措辞再重跑对应实验，直到不再告警。
 % ---------------------------------------------------------------------
 function warn_overlong_title(hAx)
     MAXW = 48;   % 单栏图一行标题有效宽度上限（CJK 全宽字计 2，ASCII 计 1）
