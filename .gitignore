@@ -22,5 +22,7 @@
 slprj/
 .Old/
 
-# 排除 projects 目录（只跟踪 utils）
-/projects/
+# 历史项目目录（不参与当前布局）
+/Undergraduate_project/
+slprj/
+.Old/

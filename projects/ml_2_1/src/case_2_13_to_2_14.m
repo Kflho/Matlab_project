@@ -1,0 +1,12 @@
+clc;
+student.name="sam";
+student.grade=6;
+student.subject={'chinese','math','english'};
+student.result={99,99,99};
+student
+schedule(2)=struct('day','thursday','time','15:00','number','18');
+schedule(1)
+schedule(2)
+newschedule=struct('day',{'thursday','friday'},'time',{'15:00','15:00'},'number',{'18','18'})
+newschedule(1)
+newschedule(2)
